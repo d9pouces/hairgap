@@ -24,14 +24,13 @@ from setuptools import find_packages, setup
 
 # avoid a from hairgap import __version__ as version (that compiles hairgap.__init__ and is not compatible with bdist_deb)
 version = None
-for line in open(os.path.join("hairgap", "__init__.py")):
-    matcher = re.match(r"""^__version__\s*=\s*['"](.*)['"]\s*$""", line)
-    version = version or matcher and matcher.group(1)
+with open(os.path.join("hairgap", "__init__.py")) as fd:
+    for line in fd:
+        matcher = re.match(r"""^__version__\s*=\s*['"](.*)['"]\s*$""", line)
+        version = version or matcher and matcher.group(1)
 
 # get README content from README.md file
-with open(
-        os.path.join(os.path.dirname(__file__), "README.md")
-) as fd:
+with open(os.path.join(os.path.dirname(__file__), "README.md")) as fd:
     long_description = fd.read()
 
 entry_points = {"console_scripts": ["hairgap = hairgap.cli:main"]}
@@ -52,6 +51,7 @@ setup(
     test_suite="hairgap.tests",
     install_requires=[],
     setup_requires=[],
+    tests_require=["tox", "pytest"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Operating System :: MacOS :: MacOS X",
