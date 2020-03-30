@@ -18,8 +18,9 @@ import os
 import shutil
 import tempfile
 import uuid
-from typing import Dict
+from typing import Dict, Optional
 
+from hairgap.receiver import Receiver
 from hairgap.sender import DirectorySender
 from hairgap.utils import Config, now
 
@@ -45,6 +46,29 @@ class SingleDirSender(DirectorySender):
     @property
     def index_abspath(self):
         return self.index_path
+
+
+class SingleDirReceiver(Receiver):
+    available_attributes = {"uid", "creation"}
+
+    def __init__(
+        self,
+        config: Config,
+        after_reception_path: str,
+        threading: bool = False,
+        port: int = None,
+    ):
+        super().__init__(config, threading=threading, port=port)
+        self.after_reception_path = after_reception_path
+
+    def transfer_complete(self):
+        super().transfer_complete()
+        print(os.path.join(self.after_reception_path, self.current_attributes["uid"]))
+
+    def get_current_transfer_directory(self) -> Optional[str]:
+        if not self.current_attributes["uid"]:
+            return None
+        return os.path.join(self.after_reception_path, self.current_attributes["uid"])
 
 
 # noinspection PyUnusedLocal
@@ -74,16 +98,55 @@ def send_directory(args):
 
 
 def receive_directory(args):
-    print(args)
+    with tempfile.TemporaryDirectory(dir=args.tmp_path) as dirname:
+        config = Config(
+            destination_ip=args.ip,
+            destination_port=args.port,
+            destination_path=dirname,
+            timeout_s=args.timeout_s,
+            mem_limit_mb=args.mem_limit_mb,
+            hairgapr=args.bin_path,
+        )
+        receiver = SingleDirReceiver(
+            config, args.destination, threading=not args.no_threading
+        )
+        try:
+            receiver.loop()
+        except KeyboardInterrupt:
+            pass
 
 
-def main(argv=None):
+def populate_receive_parser(receive_parser):
     tmp_dir = tempfile.gettempdir()
+    receive_parser.add_argument(
+        "ip",
+        help="destination IP address (cannot be localhost, even for testing purposes)",
+    )
+    receive_parser.add_argument(
+        "destination", help="root directory, where received directory are written"
+    )
+    receive_parser.add_argument("--port", "-p", type=int, default=8008, help="UDP port")
+    receive_parser.add_argument("--bin-path", help="path of the hairgapr binary")
+    receive_parser.add_argument("--timeout-s", "-t", type=float)
+    receive_parser.add_argument(
+        "--no-threading",
+        action="store_true",
+        default=False,
+        help="avoid multithreading. Only if small files are expected!",
+    )
+    receive_parser.add_argument(
+        "--mem-limit-mb", "-m", type=float,
+    )
+    receive_parser.add_argument(
+        "--tmp-path",
+        help="temporary path, used during reception [%s]" % tmp_dir,
+        default=tmp_dir,
+    )
+    receive_parser.set_defaults(func=receive_directory)
 
-    parser = argparse.ArgumentParser()
-    parser.set_defaults(func=missing_command)
-    subparsers = parser.add_subparsers()
-    send_parser = subparsers.add_parser("send")
+
+def populate_send_parser(send_parser):
+    tmp_dir = tempfile.gettempdir()
     send_parser.add_argument(
         "ip",
         help="destination IP address (cannot be localhost, even for testing purposes)",
@@ -97,9 +160,13 @@ def main(argv=None):
     send_parser.add_argument("--error-chunk-size", "-N", type=int)
     send_parser.add_argument("--max-rate-mbps", "-b", type=int)
     send_parser.add_argument("--mtu-b", "-M", type=int)
-    send_parser.add_argument("--keepalive-ms", "-k", type=int)
+    send_parser.add_argument("--keepalive-ms", "-k", type=int, default=500)
     send_parser.add_argument(
-        "--delay-s", "-d", type=float, help="delay between two successive files"
+        "--delay-s",
+        "-d",
+        type=float,
+        help="delay between two successive files",
+        default=3.0,
     )
     send_parser.add_argument(
         "--tmp-path",
@@ -109,24 +176,14 @@ def main(argv=None):
     )
     send_parser.set_defaults(func=send_directory)
 
-    receive_parser = subparsers.add_parser("receive")
-    receive_parser.add_argument(
-        "ip",
-        help="destination IP address (cannot be localhost, even for testing purposes)",
-    )
-    receive_parser.add_argument(
-        "destination", help="root directory, where received directory are written"
-    )
-    receive_parser.add_argument("--port", "-p", type=int, default=8008, help="UDP port")
-    receive_parser.add_argument("--bin-path", help="path of the hairgapr binary")
-    receive_parser.add_argument("-t", type=float)
-    receive_parser.add_argument("-m", type=float)
-    receive_parser.add_argument(
-        "--tmp-path",
-        help="temporary path, used during reception [%s]" % tmp_dir,
-        default=tmp_dir,
-    )
-    receive_parser.set_defaults(func=receive_directory)
 
+def main(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.set_defaults(func=missing_command)
+    subparsers = parser.add_subparsers()
+    send_parser = subparsers.add_parser("send")
+    populate_send_parser(send_parser)
+    receive_parser = subparsers.add_parser("receive")
+    populate_receive_parser(receive_parser)
     args = parser.parse_args(argv)
     args.func(args)
