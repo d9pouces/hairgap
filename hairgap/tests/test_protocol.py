@@ -24,6 +24,7 @@
 
 import os
 import shutil
+import socket
 import tempfile
 import time
 import uuid
@@ -188,9 +189,17 @@ class TestDiodeTransfer(TestCase):
 
     @staticmethod
     def get_config(tmp_dir):
+        src_port = 15124
+        while True:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.bind(("localhost", src_port))
+                break
+            except OSError:
+                src_port += 1
         return Config(
             destination_ip="localhost",
-            destination_port=15124,
+            destination_port=src_port,
             destination_path=os.path.join(tmp_dir, "transfering"),
             end_delay_s=3.0,
             error_chunk_size=None,
