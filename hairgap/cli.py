@@ -22,7 +22,7 @@ from typing import Dict, Optional
 
 from hairgap.receiver import Receiver
 from hairgap.sender import DirectorySender
-from hairgap.utils import Config, now
+from hairgap.utils import Config, now, ensure_dir
 
 
 class SingleDirSender(DirectorySender):
@@ -48,7 +48,7 @@ class SingleDirSender(DirectorySender):
         return self.index_path
 
 
-class SingleDirReceiver(Receiver):
+class SimpleDirReceiver(Receiver):
     available_attributes = {"uid", "creation"}
 
     def __init__(
@@ -91,7 +91,12 @@ def send_directory(args):
         )
         copy_path = os.path.join(dirname, "data")
         index_path = os.path.join(dirname, "index.txt")
-        shutil.copytree(args.source, copy_path)
+        source = args.source
+        if os.path.isfile(source):
+            ensure_dir(copy_path)
+            shutil.copy(source, os.path.join(copy_path, os.path.basename(source)))
+        else:
+            shutil.copytree(source, copy_path)
         sender = SingleDirSender(config, data_path=copy_path, index_path=index_path)
         sender.prepare_directory()
         sender.send_directory()
@@ -107,7 +112,7 @@ def receive_directory(args):
             mem_limit_mb=args.mem_limit_mb,
             hairgapr=args.bin_path,
         )
-        receiver = SingleDirReceiver(
+        receiver = SimpleDirReceiver(
             config, args.destination, threading=not args.no_threading
         )
         try:
