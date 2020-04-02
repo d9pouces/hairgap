@@ -33,24 +33,43 @@ HAIRGAP_PREFIXES = {
 
 
 class DirectorySender:
+    """
+    Send the content of a directory. Must be subclassed to implement `transfer_abspath` and `index_abspath`.
+
+    .. code-block:: python
+
+        sender = DirectorySender(Config())
+        sender.prepare_directory()
+        # modify in-place the data directory! generate the index file
+        sender.send_directory()
+
+
+    """
+
     def __init__(self, config: Config):
         self.config = config
 
     def get_attributes(self) -> Dict[str, str]:
+        """return a dict of attributes to add in the index file (like unique IDs to track transfers on the receiver side)
+        keys and values must be simple strings (no new-lines symbols and not contains the " = " substring).
+        Available keys must be added to the used :attr:`Receiver.available_attributes`.
+        """
         return {}
 
     @property
-    def transfer_abspath(self):
+    def transfer_abspath(self) -> str:
+        """returns the absolute path of directory to send"""
         raise NotImplementedError
 
     @property
     def index_abspath(self):
+        """returns the absolute path of the index file to create """
         raise NotImplementedError
 
     def prepare_directory(self) -> Tuple[int, int]:
         """create an index file and return the number of files and the total size.
 
-        **can modify in-place some files (those beginning by `# *-* HAIRGAP-`)**
+        **can modify in-place some files (those empty or beginning by `# *-* HAIRGAP-`)**
         """
         logger.info("Preparing '%s'…" % self.transfer_abspath)
         dir_abspath = self.transfer_abspath
@@ -103,6 +122,7 @@ class DirectorySender:
         return total_files, total_size
 
     def send_directory(self, port: int = None):
+        """send all files using hairgap"""
         dir_abspath = self.transfer_abspath
         index_path = self.index_abspath
         if not os.path.isdir(dir_abspath):

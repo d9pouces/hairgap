@@ -259,6 +259,7 @@ class Receiver:
         """called when all files of a transfer are received.
 
         the execution time of this method must be small when threading is False (5 seconds between two communications)
+        You can read :attr:`current_attributes` to retrieve the attributes defined by the sender (set to `None` by default).
 
         """
         pass
