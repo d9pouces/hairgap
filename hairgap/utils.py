@@ -107,6 +107,10 @@ def now():
 
 
 class Config:
+    """
+    Stores hairgap command-line options and delay between successive sends
+    """
+
     def __init__(
         self,
         destination_ip=None,

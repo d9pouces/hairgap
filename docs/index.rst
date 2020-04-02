@@ -6,6 +6,9 @@
 Hairgap's documentation
 =======================
 
+Introduction
+------------
+
 Basic protocol to send files using the [hairgap binary](https://github.com/cea-sec/hairgap).
 The goal is to send random files through a unidirectionnal data-diode using UDP connections.
 
@@ -31,17 +34,19 @@ This protocol is customizable and the sender side can add some attributes to eac
 * The MAC adress of the destination must be known from the sender machine. You can inject this information into the ARP cache of the sender machine:
 
 
-..code-block: bash
+.. code-block:: bash
 
    DESTINATION_IP="the IP address of the destination machine"
    DESTINATION_MAC="the MAC address of the destination machine"
    arp -s ${DESTINATION_IP} ${DESTINATION_MAC}
 
+Command-line usage
+------------------
 
 First, you must start the receiver on the destination side:
 
 
-..code-block: bash
+.. code-block:: bash
 
    pip3 install hairgap
    pyhairgap receive ${DESTINATION_IP} directory/
@@ -49,14 +54,34 @@ First, you must start the receiver on the destination side:
 
 Then you can send directories:
 
-..code-block: bash
+.. code-block:: bash
 
    pip3 install hairgap
    pyhairgap send ${DESTINATION_IP} directory/
 
+You must ensure that only one transfer occurs at once (to a given port), due to UDP limitations.
 
+How does it work?
+-----------------
 
-Overview:
+- First, an index file is created beside the directory to send, with the relative path of each file, their sizes and SHA256s.
+   If a file is empty, this file is replaced by a magic value (since hairgap cannot send empty files).
+   If a file starts by some magic values, then this file is overwritten to escape these magic values.
+   The content of the directory to send is **modified in-place**.
 
-:doc:`api/index`
-    The complete API documentation, organized by modules
+- When all files are checked and the index file is ready, the transfer of the index file occurs, then each file is sent.
+   There is a 3-second sleep between two successive transfers.
+
+- On the receiver side, there are two infinite loops:
+
+   - one for the reception thread, that receives a file and sends it to the processing thread
+   - one for the processing thread, that process each file (if its an index, then it reads it and knows how to rename the next files)
+
+Unexpected files (for example, if the index file has been sent before the start of the receive process) are deleted.
+
+Customize transfers
+-------------------
+
+The configuration (with destination IP, `hairgap`'s options, destination paths…) is stored into a :mod
+
+.. py:class:: hairgap.utils.Config
