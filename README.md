@@ -6,6 +6,7 @@ The goal is to send random files through a unidirectionnal data-diode using UDP 
 
 [![Build Status](https://travis-ci.org/d9pouces/hairgap.svg?branch=master)](https://travis-ci.org/d9pouces/hairgap)
 [![Documentation Status](https://readthedocs.org/projects/hairgap/badge/?version=latest)](https://hairgap.readthedocs.io/en/latest/?badge=latest)
+[![PyPI version](https://badge.fury.io/py/hairgap.svg)](https://pypi.org/project/hairgap/)
 
 By default, hairgap can only send a file, without its name. This library implements a basic protocol to send complete directories
 and checksum transfered files. 
