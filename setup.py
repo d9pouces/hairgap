@@ -33,7 +33,7 @@ with open(os.path.join("hairgap", "__init__.py")) as fd:
 with open(os.path.join(os.path.dirname(__file__), "README.md")) as fd:
     long_description = fd.read()
 
-entry_points = {"console_scripts": ["hairgap = hairgap.cli:main"]}
+entry_points = {"console_scripts": ["pyhairgap = hairgap.cli:main"]}
 
 setup(
     name="hairgap",
