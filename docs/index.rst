@@ -24,10 +24,6 @@ The goal is to send random files through a unidirectionnal data-diode using UDP 
    :target: https://pypi.org/project/hairgap/
    :alt: Pypi Status
 
-.. image:: https://img.shields.io/github/issues/d9pouces/hairgap?style=flat
-   :target: https://github.com/d9pouces/hairgap/issues
-   :alt: GitHub issues
-
 .. image:: https://img.shields.io/github/languages/top/d9pouces/hairgap
    :target: https://github.com/d9pouces/hairgap/
    :alt: GitHub top language
