@@ -11,11 +11,12 @@ The algorithm is simple:
 
 `receive_file` launches the command hairgapr that waits for a transfer and exists when a file is received.
 `process_file` read the first bytes of the file
-    - if they match HAIRGAP_MAGIC_NUMBER_INDEX, then this is an index file, with:
-        - the transfer identifier
-        - the previous transfer identifier
-        - the list of following files and their sha256 (in the transfer order)
-    - otherwise, this is the next expected file, as read by the index file
+
+- if they match HAIRGAP_MAGIC_NUMBER_INDEX, then this is an index file, with:
+    - the transfer identifier
+    - the previous transfer identifier
+    - the list of following files and their sha256 (in the transfer order)
+- otherwise, this is the next expected file, as read by the index file
 
 Empty files cannot be sent by hairgap, so they are replaced by the HAIRGAP_MAGIC_NUMBER_EMPTY constant.
 If a new index file is read before the last expected file of the previous index, then we start a new index:
@@ -59,6 +60,24 @@ logger = logging.getLogger("hairgap")
 
 
 class Receiver:
+    """
+    define the reception process. Can be split into two threads or can be serialize operations when files are small enough.
+    You just have to call the `loop` method to start the reception process.
+    Basically, the algorithm is:
+
+    .. code-block:: python
+
+        while True:
+            receive_file(temporary_filepath)
+            if is_index_file(temporary_filepath):
+                read_list_of_expected_filenames()
+            else:
+                filename = expected_filenames.pop()
+                os.rename(temporary_filepath, filename)
+
+
+    """
+
     available_attributes = set()  # type: Set[str]
 
     def __init__(self, config: Config, threading: bool = False, port: int = None):

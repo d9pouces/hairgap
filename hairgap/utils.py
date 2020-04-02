@@ -108,7 +108,9 @@ def now():
 
 class Config:
     """
-    Stores hairgap command-line options and delay between successive sends
+    Stores hairgap command-line options, delay between successive sends, and temporary directory.
+    Every parameter is accessed through a property decorator, so it can easily overriden.
+    You should check https://github.com/cea-sec/hairgap for hairgap options.
     """
 
     def __init__(

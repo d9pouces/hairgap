@@ -82,6 +82,20 @@ Unexpected files (for example, if the index file has been sent before the start 
 Customize transfers
 -------------------
 
-The configuration (with destination IP, `hairgap`'s options, destination paths…) is stored into a :mod
+Receiver side
+~~~~~~~~~~~~~
 
-.. py:class:: hairgap.utils.Config
+.. automodule:: hairgap.receiver
+   :members:
+
+Sender side
+~~~~~~~~~~~
+
+.. automodule:: hairgap.sender
+   :members:
+
+Configuration
+~~~~~~~~~~~~~
+
+.. automodule:: hairgap.utils
+   :members:
