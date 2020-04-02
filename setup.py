@@ -51,7 +51,7 @@ setup(
     test_suite="hairgap.tests",
     install_requires=[],
     setup_requires=[],
-    tests_require=["tox", "pytest"],
+    tests_require=["tox", "pytest", "sphinx"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Operating System :: MacOS :: MacOS X",
