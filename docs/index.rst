@@ -36,6 +36,11 @@ The goal is to send random files through a unidirectionnal data-diode using UDP 
    :target: https://pypi.org/project/hairgap/
    :alt: PyPI - License
 
+.. image:: https://img.shields.io/lgtm/grade/python/github/d9pouces/hairgap
+   :target: https://lgtm.com/projects/g/d9pouces/hairgap/?mode=list
+   :alt: LGTM Grade
+
+
 By default, hairgap can only send a file, without its name. This library implements a basic protocol to send complete directories
 and checksum transfered files.
 
