@@ -16,12 +16,17 @@
 #                                                                              #
 # ##############################################################################
 import argparse
+import logging
 import socket
 import sys
+
+logger = logging.getLogger("hairgaps")
 
 
 def main():
     """emulate the hairgaps behaviour but ignores most arguments"""
+    print("nqlkdf,nsdlfsdlf,n")
+    logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, default=8008)
     parser.add_argument("-r", type=float)  # unused
@@ -31,9 +36,13 @@ def main():
     parser.add_argument("-k", type=int)  # unused
     parser.add_argument("ip")
     args = parser.parse_args()
+    size = 0
+    logger.debug("waiting for data to send to %s:%s" % (args.ip, args.p))
     with socket.create_connection((args.ip, args.p)) as sock:
         for data in iter(lambda: sys.stdin.buffer.read(4096), b""):
             sock.send(data)
+            size += len(data)
+    logger.debug("%s bytes sent" % size)
 
 
 if __name__ == "__main__":

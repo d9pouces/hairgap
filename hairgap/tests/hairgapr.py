@@ -17,24 +17,32 @@
 # ##############################################################################
 
 import argparse
+import logging
 import socket
 import sys
+
+logger = logging.getLogger("hairgapr")
 
 
 def main():
     """emulate the hairgapr behaviour but ignores most arguments"""
+    logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, default=8008)
     parser.add_argument("-t", type=float)  # unused
     parser.add_argument("-m", type=float)  # unused
     parser.add_argument("ip")
     args = parser.parse_args()
+    size = 0
+    logger.debug("waiting for receiving data from %s:%s" % (args.ip, args.p))
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((args.ip, args.p))
         sock.listen(0)
         conn, __ = sock.accept()
         for data in iter(lambda: conn.recv(4096), b""):
+            size += len(data)
             sys.stdout.buffer.write(data)
+    logger.debug("%s bytes received" % size)
 
 
 if __name__ == "__main__":

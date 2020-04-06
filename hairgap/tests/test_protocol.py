@@ -21,7 +21,7 @@
 #  All Rights Reserved                                                         #
 #                                                                              #
 # ##############################################################################
-
+import logging
 import os
 import shutil
 import socket
@@ -126,6 +126,12 @@ class TestDiodeTransfer(TestCase):
             src_path = pkg_resources.resource_filename("hairgap", "tests")
             self.send_directory(tmp_dir, src_path)
 
+    def test_create_transfer_tar_archive(self):
+        logging.basicConfig(level=logging.DEBUG)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = pkg_resources.resource_filename("hairgap", "tests")
+            self.send_directory(tmp_dir, src_path, use_tar_archives=True)
+
     def test_send_empty_file(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             src_path = os.path.join(tmp_dir, "original")
@@ -160,8 +166,8 @@ class TestDiodeTransfer(TestCase):
                     fd.write("%s\n" % value)
             self.send_directory(tmp_dir, src_path)
 
-    def send_directory(self, tmp_dir, original_path):
-        config = self.get_config(tmp_dir)
+    def send_directory(self, tmp_dir, original_path, use_tar_archives=True):
+        config = self.get_config(tmp_dir, use_tar_archives=use_tar_archives)
         src_path = os.path.join(tmp_dir, "original_copy")
         shutil.copytree(original_path, src_path)
         dst_path = os.path.join(tmp_dir, "destination")
@@ -188,7 +194,7 @@ class TestDiodeTransfer(TestCase):
             self.assertEqual(src_content, dst_content)
 
     @staticmethod
-    def get_config(tmp_dir):
+    def get_config(tmp_dir, use_tar_archives: bool = False):
         src_port = 15124
         while True:
             try:
@@ -211,6 +217,7 @@ class TestDiodeTransfer(TestCase):
             redundancy=3.0,
             hairgapr=pkg_resources.resource_filename("hairgap.tests", "hairgapr.py"),
             hairgaps=pkg_resources.resource_filename("hairgap.tests", "hairgaps.py"),
+            use_tar_archives=use_tar_archives,
         )
 
     @staticmethod

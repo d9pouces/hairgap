@@ -14,7 +14,8 @@ import re
 import subprocess
 import tempfile
 import time
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
+from threading import Thread
 
 from hairgap.constants import (
     HAIRGAP_MAGIC_NUMBER_EMPTY,
@@ -67,10 +68,41 @@ class DirectorySender:
         raise NotImplementedError
 
     def prepare_directory(self) -> Tuple[int, int]:
-        """create an index file and return the number of files and the total size.
+        """create an index file and return the number of files and the total size (including the index file).
 
-        **can modify in-place some files (those empty or beginning by `# *-* HAIRGAP-`)**
+        **can modify in-place some files (those empty or beginning by `# *-* HAIRGAP-`)** when not `config.use_tar_archives`
+
+        result is always (1, 0) when `config.use_tar_archives` and not `config.always_compute_size` to speed up
+
         """
+        if self.config.use_tar_archives:
+            return self.prepare_directory_tar()
+        return self.prepare_directory_no_tar()
+
+    def prepare_directory_tar(self) -> Tuple[int, int]:
+        logger.info("Preparing '%s'…" % self.transfer_abspath)
+        with open(self.index_abspath, "w") as fd:
+            fd.write(HAIRGAP_MAGIC_NUMBER_INDEX)
+            fd.write("[hairgap]\n")
+            for k, v in sorted(self.get_attributes().items()):
+                fd.write("%s = %s\n" % (k, v.replace("\n", "")))
+        total_size = 0
+        total_files = 1
+        if self.config.always_compute_size:
+            total_size += os.path.getsize(self.index_abspath)
+            for root, dirnames, filenames in os.walk(self.transfer_abspath):
+                for filename in filenames:
+                    file_abspath = os.path.join(root, filename)
+                    if os.path.isfile(file_abspath):
+                        total_files += 1
+                        total_size += os.path.getsize(file_abspath)
+        logger.info(
+            "%s file(s), %s byte(s), prepared in '%s'."
+            % (total_files, total_size, self.transfer_abspath)
+        )
+        return total_files, total_size
+
+    def prepare_directory_no_tar(self) -> Tuple[int, int]:
         logger.info("Preparing '%s'…" % self.transfer_abspath)
         dir_abspath = self.transfer_abspath
         index_path = self.index_abspath
@@ -121,8 +153,10 @@ class DirectorySender:
         )
         return total_files, total_size
 
-    def send_directory(self, port: int = None):
-        """send all files using hairgap"""
+    def send_directory(self, port: Optional[int] = None):
+        """send all files using hairgap.
+
+        raise ValueError in case of error on the index or the directory to send"""
         dir_abspath = self.transfer_abspath
         index_path = self.index_abspath
         if not os.path.isdir(dir_abspath):
@@ -137,6 +171,76 @@ class DirectorySender:
             )
             raise ValueError("Missing index '%s'" % index_path)
         logger.info("Sending '%s'…" % self.transfer_abspath)
+        if self.config.use_tar_archives:
+            self.send_directory_tar(port=port)
+        else:
+            self.send_directory_no_tar(port=port)
+        logger.info("Directory '%s' sent." % self.transfer_abspath)
+
+    def send_directory_tar(self, port: Optional[int] = None):
+        dir_abspath = self.transfer_abspath
+        index_path = self.index_abspath
+        tar_cmd = [
+            self.config.tar,
+            "czf",
+            "-",
+            "-C",
+            os.path.dirname(index_path),
+            os.path.basename(index_path),
+            "-C",
+            os.path.dirname(dir_abspath),
+            os.path.basename(dir_abspath),
+        ]
+        # we use gzip, not for compression (most files are probably already compressed) but for the CRC checksum
+        # we cannot use more efficient algorithms like xz/bz2 (they cannot compress streams)
+        read_fd, write_fd = os.pipe()
+        logger.info("Sending %s via hairgap …" % dir_abspath)
+        hairgap_cmd = DirectorySender.get_hairgap_command(self.config, port)
+        logger.debug("hairgaps command: %s" % " ".join(hairgap_cmd))
+        logger.debug("tar command: %s" % " ".join(tar_cmd))
+        with tempfile.NamedTemporaryFile() as temp_fd:
+            tar_p = subprocess.Popen(
+                tar_cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=temp_fd
+            )
+            tar_p.communicate(b"")
+            temp_fd.flush()
+            temp_fd.seek(0)
+            hairgap_p = subprocess.Popen(
+                hairgap_cmd,
+                stdin=temp_fd,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+            hairgap_thread = Thread(target=hairgap_p.communicate)
+            hairgap_thread.start()
+            hairgap_thread.join()
+
+        # hairgap_p = subprocess.Popen(
+        #     hairgap_cmd, stdin=read_fd, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+        # )
+        # tar_p = subprocess.Popen(tar_cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=write_fd)
+        #
+        # hairgap_thread = Thread(target=hairgap_p.communicate)
+        # hairgap_thread.start()
+        # tar_p.communicate(b"")
+        # hairgap_thread.join()
+        if hairgap_p.returncode or tar_p.returncode:
+            logger.error(
+                "Unable to run '%s' [returncode=%s] and '%s' [returncode=%s]\n"
+                % (
+                    " ".join(hairgap_cmd),
+                    hairgap_p.returncode,
+                    " ".join(tar_cmd),
+                    tar_p.returncode,
+                )
+            )
+            raise ValueError("Unable to send '%s'" % dir_abspath)
+        time.sleep(self.config.end_delay_s)
+
+    def send_directory_no_tar(self, port: Optional[int] = None):
+        """send all files using hairgap"""
+        dir_abspath = self.transfer_abspath
+        index_path = self.index_abspath
         self.send_file(self.config, index_path, port=port)
         with open(index_path) as fd:
             for line in fd:
@@ -149,13 +253,15 @@ class DirectorySender:
                 self.send_file(
                     self.config, file_abspath, sha256=actual_sha256, port=port
                 )
-        logger.info("Directory '%s' sent." % self.transfer_abspath)
 
     @staticmethod
     def send_file(
-        config: Config, file_abspath: str, sha256: str = None, port: int = None
+        config: Config,
+        file_abspath: str,
+        sha256: Optional[str] = None,
+        port: Optional[int] = None,
     ):
-        # FIXME: vérifier avec arp -n que l'IP est connue dans le cache ARP (via un check Django)
+        # FIXME: vérifier avec arp -n que l'IP est connue dans le cache ARP
         if not os.path.isfile(file_abspath):
             logger.warning("Missing file '%s'." % file_abspath)
             raise ValueError("Missing file '%s'" % file_abspath)
@@ -179,6 +285,28 @@ class DirectorySender:
                 port or config.destination_port,
             )
         logger.info(msg)
+        cmd = DirectorySender.get_hairgap_command(config, port)
+        logger.info(" ".join(cmd))
+        with open(file_abspath, "rb") as tmp_fd:
+            p = subprocess.Popen(
+                cmd, stdin=tmp_fd, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+            )
+            stdout, stderr = p.communicate()
+            if p.returncode:
+                logger.error(
+                    "Unable to run '%s' \nreturncode=%s\nstdout=%r\nstderr=%r\n"
+                    % (" ".join(cmd), p.returncode, stdout.decode(), stderr.decode())
+                )
+                raise ValueError("Unable to send '%s'" % file_abspath)
+        logger.info(
+            "File '%s' sent; sleeping for %ss." % (file_abspath, config.end_delay_s)
+        )
+        if empty_file_fd is not None:
+            empty_file_fd.close()
+        time.sleep(config.end_delay_s)
+
+    @staticmethod
+    def get_hairgap_command(config: Config, port: Optional[int]):
         cmd = [
             config.hairgaps_path,
             "-p",
@@ -201,21 +329,4 @@ class DirectorySender:
         if config.keepalive_ms:
             cmd += ["-k", str(config.keepalive_ms)]
         cmd.append(config.destination_ip)
-        logger.info(" ".join(cmd))
-        with open(file_abspath, "rb") as tmp_fd:
-            p = subprocess.Popen(
-                cmd, stdin=tmp_fd, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-            )
-            stdout, stderr = p.communicate()
-            if p.returncode:
-                logger.error(
-                    "Unable to run '%s' \nreturncode=%s\nstdout=%r\nstderr=%r\n"
-                    % (" ".join(cmd), p.returncode, stdout.decode(), stderr.decode())
-                )
-                raise ValueError("Unable to send '%s'" % file_abspath)
-        logger.info(
-            "File '%s' sent; sleeping for %ss." % (file_abspath, config.end_delay_s)
-        )
-        if empty_file_fd is not None:
-            empty_file_fd.close()
-        time.sleep(config.end_delay_s)
+        return cmd

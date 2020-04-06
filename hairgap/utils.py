@@ -126,8 +126,11 @@ class Config:
         mtu_b: Optional[int] = None,
         timeout_s: float = 3.0,
         redundancy: float = 3.0,
-        hairgapr="hairgapr",
-        hairgaps="hairgaps",
+        hairgapr: str = "hairgapr",
+        hairgaps: str = "hairgaps",
+        tar: str = None,
+        use_tar_archives: bool = False,
+        always_compute_size: bool = True,
     ):
         self._destination_ip = destination_ip
         self._destination_port = destination_port
@@ -142,6 +145,13 @@ class Config:
         self._redundancy = redundancy
         self._hairgapr_path = hairgapr
         self._hairgaps_path = hairgaps
+        self._use_tar_archives = use_tar_archives
+        self._always_compute_size = always_compute_size
+        if tar is None and os.path.isfile("/usr/bin/tar"):
+            tar = "/usr/bin/tar"
+        elif tar is None:
+            tar = "/bin/tar"
+        self._tar = tar
 
     @property
     def destination_ip(self):
@@ -194,3 +204,15 @@ class Config:
     @property
     def hairgaps_path(self):
         return self._hairgaps_path
+
+    @property
+    def use_tar_archives(self):
+        return self._use_tar_archives
+
+    @property
+    def always_compute_size(self):
+        return self._always_compute_size
+
+    @property
+    def tar(self):
+        return self._tar

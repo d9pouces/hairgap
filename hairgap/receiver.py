@@ -38,11 +38,14 @@ but can also be run in separate threads for handling large files.
 
 import datetime
 import hashlib
+import io
 import logging
 import os
 import re
 import shutil
 import subprocess
+import tarfile
+import tempfile
 import time
 import uuid
 from queue import Empty, Queue
@@ -134,6 +137,7 @@ class Receiver:
             self.hairgap_subprocess = subprocess.Popen(
                 cmd, stdout=fd, stderr=subprocess.PIPE
             )
+            logger.debug("hairgapr command: %s" % " ".join(cmd))
             __, stderr = self.hairgap_subprocess.communicate()
             fd.flush()
         returncode = self.hairgap_subprocess.returncode
@@ -181,7 +185,7 @@ class Receiver:
         while self.continue_loop:
             try:
                 valid, tmp_abspath = self.process_queue.get(timeout=1)
-                self.process_received_file(tmp_abspath)
+                self.process_received_file(tmp_abspath, valid=valid)
             except Empty:
                 # the timeout is required to quit the thread when self.continue_loop is False
                 continue
@@ -196,10 +200,62 @@ class Receiver:
         the execution time of this method must be small when threading is False (5 seconds between two communications)
         => must be threaded when large files are processed since we compute their sha256.
 
+        :param tmp_abspath: the temporary absolute path
+        :param valid: the file has been correctly received by hairgap
+        :return:
+        """
+        if self.config.use_tar_archives:
+            self.process_received_file_tar(tmp_abspath, valid=valid)
+        else:
+            self.process_received_file_no_tar(tmp_abspath, valid=valid)
+
+    def process_received_file_tar(self, tmp_abspath: str, valid: bool = True):
+        """
+        process a tar.gz archive.
+        a single file and a single directory are expected at the root of the received archive
         :param tmp_abspath:
         :param valid:
         :return:
         """
+        if not valid:
+            if os.path.isfile(tmp_abspath):
+                os.remove(tmp_abspath)
+            return
+        with tarfile.open(name=tmp_abspath, mode="r:gz") as tar_fd:
+            index_member = None
+            for member in tar_fd.getmembers():  # type: tarfile.TarInfo
+                if "/" not in member.name and member.isfile():
+                    index_member = member
+                    break
+            if index_member is None:
+                logger.error("index file not found in %s")
+                return
+            # /!\ the index file must be read before extracting other files
+            with tempfile.NamedTemporaryFile() as dst_fd:
+                src_fd = tar_fd.extractfile(index_member)
+                for data in iter(lambda: src_fd.read(8192), b""):
+                    dst_fd.write(data)
+                src_fd.close()
+                dst_fd.flush()
+                self.read_index(dst_fd.name)
+            self.transfer_start()
+            for member in tar_fd.getmembers():  # type: tarfile.TarInfo
+                if not member.isfile() or member.issym():
+                    continue
+                root, sep, rel_path = member.name.partition("/")
+                if sep != "/":  # the index file => we ignore it
+                    continue
+                self.transfer_file_received(
+                    tmp_abspath,
+                    rel_path,
+                    expected_sha256=None,
+                    actual_sha256=None,
+                    tmp_fd=tar_fd.extractfile(member),
+                )
+            self.transfer_complete()
+        os.remove(tmp_abspath)
+
+    def process_received_file_no_tar(self, tmp_abspath: str, valid: bool = True):
         empty_prefix = HAIRGAP_MAGIC_NUMBER_EMPTY.encode()
         index_prefix = HAIRGAP_MAGIC_NUMBER_INDEX.encode()
         escape_prefix = HAIRGAP_MAGIC_NUMBER_ESCAPE.encode()
@@ -266,6 +322,8 @@ class Receiver:
 
     def get_current_transfer_directory(self) -> Optional[str]:
         """return a folder name where all files of a transfer can be moved to.
+
+        The index file has been read and the attributes are set.
         This folder will be automatically created.
         If None, all received files will be deleted.
         """
@@ -288,8 +346,9 @@ class Receiver:
         self,
         tmp_abspath,
         file_relpath,
-        actual_sha256: str = None,
-        expected_sha256: str = None,
+        actual_sha256: Optional[str] = None,
+        expected_sha256: Optional[str] = None,
+        tmp_fd: io.BytesIO = None,
     ):
         """called when a file is received
 
@@ -297,11 +356,26 @@ class Receiver:
 
         :param tmp_abspath: the path of the received file
         :param file_relpath: the destination path of the received file
-        :param actual_sha256: actual SHA256
-        :param expected_sha256: expected SHA256
+        :param actual_sha256: actual SHA256 (not provided in case of tar archives)
+        :param expected_sha256: expected SHA256 (not provided in case of tar archives)
+        :param tmp_fd: provided when tmp_abspath is not given
         :return:
         """
-        if os.path.isfile(tmp_abspath):
+        if tmp_fd:
+            receive_path = self.get_current_transfer_directory()
+            self.transfer_received_count += 1
+            size = 0
+            if receive_path:
+                file_abspath = os.path.join(receive_path, file_relpath)
+                ensure_dir(file_abspath, parent=True)
+                with open(file_abspath, "wb") as dst_fd:
+                    for data in iter(lambda: tmp_fd.read(8192), b""):
+                        dst_fd.write(data)
+                        size += len(data)
+                    tmp_fd.close()
+            else:
+                logger.warning("No receive path defined: ignoring %s." % file_relpath)
+        elif os.path.isfile(tmp_abspath):
             size = os.path.getsize(tmp_abspath)
             self.transfer_received_count += 1
             receive_path = self.get_current_transfer_directory()
