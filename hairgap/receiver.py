@@ -205,7 +205,13 @@ class Receiver:
         :return:
         """
         if self.config.use_tar_archives:
-            self.process_received_file_tar(tmp_abspath, valid=valid)
+            try:
+                self.process_received_file_tar(tmp_abspath, valid=valid)
+            except Exception as e:
+                logger.exception(e)
+                logger.error("Invalid tar.gz file: %s (removed)" % tmp_abspath)
+                if os.path.isfile(tmp_abspath):
+                    os.remove(tmp_abspath)
         else:
             self.process_received_file_no_tar(tmp_abspath, valid=valid)
 

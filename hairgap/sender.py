@@ -11,6 +11,7 @@ import logging
 import os
 import random
 import re
+import shlex
 import subprocess
 import tempfile
 import time
@@ -193,49 +194,28 @@ class DirectorySender:
         ]
         # we use gzip, not for compression (most files are probably already compressed) but for the CRC checksum
         # we cannot use more efficient algorithms like xz/bz2 (they cannot compress streams)
-        read_fd, write_fd = os.pipe()
         logger.info("Sending %s via hairgap …" % dir_abspath)
         hairgap_cmd = DirectorySender.get_hairgap_command(self.config, port)
         logger.debug("hairgaps command: %s" % " ".join(hairgap_cmd))
         logger.debug("tar command: %s" % " ".join(tar_cmd))
-        with tempfile.NamedTemporaryFile() as temp_fd:
-            tar_p = subprocess.Popen(
-                tar_cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=temp_fd
-            )
-            tar_p.communicate(b"")
-            temp_fd.flush()
-            temp_fd.seek(0)
-            hairgap_p = subprocess.Popen(
-                hairgap_cmd,
-                stdin=temp_fd,
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-            )
-            hairgap_thread = Thread(target=hairgap_p.communicate)
-            hairgap_thread.start()
-            hairgap_thread.join()
-
-        # hairgap_p = subprocess.Popen(
-        #     hairgap_cmd, stdin=read_fd, stderr=subprocess.PIPE, stdout=subprocess.PIPE
-        # )
-        # tar_p = subprocess.Popen(tar_cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=write_fd)
-        #
-        # hairgap_thread = Thread(target=hairgap_p.communicate)
-        # hairgap_thread.start()
-        # tar_p.communicate(b"")
-        # hairgap_thread.join()
-        if hairgap_p.returncode or tar_p.returncode:
+        esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
+        esc_hairgap_cmd = [shlex.quote(x) for x in hairgap_cmd]
+        cmd = "%s|%s" % (" ".join(esc_tar_cmd), " ".join(esc_hairgap_cmd))
+        p = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+        )
+        stdout, stderr = p.communicate(b"")
+        time.sleep(self.config.end_delay_s)
+        if p.returncode:
             logger.error(
-                "Unable to run '%s' [returncode=%s] and '%s' [returncode=%s]\n"
-                % (
-                    " ".join(hairgap_cmd),
-                    hairgap_p.returncode,
-                    " ".join(tar_cmd),
-                    tar_p.returncode,
-                )
+                "Unable to run '%s' \nreturncode=%s\nstdout=%r\nstderr=%r\n"
+                % (" ".join(cmd), p.returncode, stdout.decode(), stderr.decode())
             )
             raise ValueError("Unable to send '%s'" % dir_abspath)
-        time.sleep(self.config.end_delay_s)
 
     def send_directory_no_tar(self, port: Optional[int] = None):
         """send all files using hairgap"""

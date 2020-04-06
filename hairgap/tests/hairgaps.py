@@ -25,7 +25,6 @@ logger = logging.getLogger("hairgaps")
 
 def main():
     """emulate the hairgaps behaviour but ignores most arguments"""
-    print("nqlkdf,nsdlfsdlf,n")
     logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", type=int, default=8008)
@@ -37,7 +36,10 @@ def main():
     parser.add_argument("ip")
     args = parser.parse_args()
     size = 0
-    logger.debug("waiting for data to send to %s:%s" % (args.ip, args.p))
+    logger.debug(
+        "waiting for data to send to %s:%s on buffer fileno %s"
+        % (args.ip, args.p, sys.stdin.buffer.fileno())
+    )
     with socket.create_connection((args.ip, args.p)) as sock:
         for data in iter(lambda: sys.stdin.buffer.read(4096), b""):
             sock.send(data)
