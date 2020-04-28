@@ -194,6 +194,14 @@ class Receiver:
                 time.sleep(1)
         logger.info("Processing loop exited.")
 
+    @staticmethod
+    def is_tar_file(tmp_abspath: str):
+        if not os.path.isfile(tmp_abspath):
+            return False
+        with open(tmp_abspath, "rb") as fd:
+            header = fd.read(270)
+        return header[257 : 257 + 6] == b"ustar "
+
     def process_received_file(self, tmp_abspath: str, valid: bool = True):
         """
         process a received file
@@ -204,7 +212,11 @@ class Receiver:
         :param valid: the file has been correctly received by hairgap
         :return:
         """
-        if self.config.use_tar_archives:
+        if self.config.use_tar_archives or (
+            self.config.use_tar_archives is None  # auto-detect mode
+            and self.expected_files.empty()
+            and self.is_tar_file(tmp_abspath)
+        ):
             try:
                 self.process_received_file_tar(tmp_abspath, valid=valid)
             except Exception as e:

@@ -16,7 +16,6 @@ import subprocess
 import tempfile
 import time
 from typing import Dict, Optional, Tuple
-from threading import Thread
 
 from hairgap.constants import (
     HAIRGAP_MAGIC_NUMBER_EMPTY,
@@ -68,6 +67,10 @@ class DirectorySender:
         """returns the absolute path of the index file to create """
         raise NotImplementedError
 
+    @property
+    def use_tar_archives(self):
+        return self.config.use_tar_archives
+
     def prepare_directory(self) -> Tuple[int, int]:
         """create an index file and return the number of files and the total size (including the index file).
 
@@ -76,7 +79,7 @@ class DirectorySender:
         result is always (1, 0) when `config.use_tar_archives` and not `config.always_compute_size` to speed up
 
         """
-        if self.config.use_tar_archives:
+        if self.use_tar_archives:
             return self.prepare_directory_tar()
         return self.prepare_directory_no_tar()
 
@@ -172,7 +175,7 @@ class DirectorySender:
             )
             raise ValueError("Missing index '%s'" % index_path)
         logger.info("Sending '%s'…" % self.transfer_abspath)
-        if self.config.use_tar_archives:
+        if self.use_tar_archives:
             self.send_directory_tar(port=port)
         else:
             self.send_directory_no_tar(port=port)
@@ -201,13 +204,14 @@ class DirectorySender:
         esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
         esc_hairgap_cmd = [shlex.quote(x) for x in hairgap_cmd]
         cmd = "%s|%s" % (" ".join(esc_tar_cmd), " ".join(esc_hairgap_cmd))
-        p = subprocess.Popen(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-        )
+        with open("/tmp/hairgap-tar.log", "ab") as log_fd:
+            p = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=log_fd,
+                stdin=subprocess.PIPE,
+            )
         stdout, stderr = p.communicate(b"")
         time.sleep(self.config.end_delay_s)
         if p.returncode:

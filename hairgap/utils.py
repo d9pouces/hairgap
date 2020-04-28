@@ -129,7 +129,7 @@ class Config:
         hairgapr: str = "hairgapr",
         hairgaps: str = "hairgaps",
         tar: str = None,
-        use_tar_archives: bool = False,
+        use_tar_archives: Optional[bool] = None,
         always_compute_size: bool = True,
     ):
         self._destination_ip = destination_ip

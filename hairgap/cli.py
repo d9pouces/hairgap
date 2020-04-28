@@ -63,7 +63,7 @@ class SimpleDirReceiver(Receiver):
 
     def transfer_complete(self):
         super().transfer_complete()
-        print(os.path.join(self.after_reception_path, self.current_attributes["uid"]))
+        print(self.get_current_transfer_directory())
 
     def get_current_transfer_directory(self) -> Optional[str]:
         if not self.current_attributes["uid"]:
