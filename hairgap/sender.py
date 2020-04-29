@@ -71,6 +71,8 @@ class DirectorySender:
 
     @property
     def use_tar_archives(self):
+        if self.config.use_tar_archives is None:
+            return True
         return self.config.use_tar_archives
 
     def prepare_directory(self) -> Tuple[int, int]:
