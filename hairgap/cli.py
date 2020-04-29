@@ -14,6 +14,7 @@
 #                                                                              #
 # ##############################################################################
 import argparse
+import logging
 import os
 import shutil
 import tempfile
@@ -23,6 +24,8 @@ from typing import Dict, Optional
 from hairgap.receiver import Receiver
 from hairgap.sender import DirectorySender
 from hairgap.utils import Config, get_arp_cache, now, ensure_dir
+
+logger = logging.getLogger(__name__)
 
 
 class SingleDirSender(DirectorySender):
@@ -63,7 +66,7 @@ class SimpleDirReceiver(Receiver):
 
     def transfer_complete(self):
         super().transfer_complete()
-        print(self.get_current_transfer_directory())
+        logger.info(self.get_current_transfer_directory())
 
     def get_current_transfer_directory(self) -> Optional[str]:
         if not self.current_attributes["uid"]:

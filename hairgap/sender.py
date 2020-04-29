@@ -271,14 +271,13 @@ class DirectorySender:
         esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
         esc_hairgap_cmd = [shlex.quote(x) for x in hairgap_cmd]
         cmd = "%s|%s" % (" ".join(esc_tar_cmd), " ".join(esc_hairgap_cmd))
-        with open("/tmp/hairgap-tar.log", "ab") as log_fd:
-            p = subprocess.Popen(
-                cmd,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=log_fd,
-                stdin=subprocess.PIPE,
-            )
+        p = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+        )
         stdout, stderr = p.communicate(b"")
         time.sleep(self.config.end_delay_s)
         if p.returncode:
