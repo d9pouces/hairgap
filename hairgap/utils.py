@@ -7,8 +7,11 @@
 # ##############################################################################
 
 import datetime
+import itertools
 import os
-from typing import Optional
+import re
+import subprocess
+from typing import Dict, Optional, Tuple
 
 FILENAME_PATTERN = r"([a-fA-F\d]{64}) = (.*)$"
 
@@ -106,6 +109,27 @@ def now():
     return datetime.datetime.utcnow().replace(tzinfo=utc)
 
 
+def get_arp_cache(content=None) -> Dict[str, Tuple[Optional[str], Optional[str]]]:
+    if content is None:
+        env = {**os.environ, **{"LC_ALL": "en_US.UTF-8"}}
+        content = subprocess.check_output(["arp", "-n"], env=env, encoding="utf-8")
+    r = {}
+    lines = content.splitlines()
+    matcher = re.match(
+        r"^([\w\s]+\s{2,})([^\s][\w\s]+\s{2,})([^\s][\w\s]+\s{2,})([^\s][\w\s]+\s{2,})([^\s]+)$",
+        lines[0],
+    )
+    sizes = list(itertools.accumulate([len(x) - 1 for x in matcher.groups()]))
+    for line in lines[1:]:
+        ip_address = line[: sizes[0]].strip() or None
+        mac_address = line[sizes[1] : sizes[2]].strip() or None
+        if not re.match(r"\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}", mac_address):
+            mac_address = None
+        iface = line[sizes[4] :].strip() or None
+        r[ip_address] = (mac_address, iface)
+    return r
+
+
 class Config:
     """
     Stores hairgap command-line options, delay between successive sends, and temporary directory.
@@ -129,6 +153,8 @@ class Config:
         hairgapr: str = "hairgapr",
         hairgaps: str = "hairgaps",
         tar: str = None,
+        split: str = None,
+        cat: str = None,
         use_tar_archives: Optional[bool] = None,
         always_compute_size: bool = True,
     ):
@@ -147,11 +173,21 @@ class Config:
         self._hairgaps_path = hairgaps
         self._use_tar_archives = use_tar_archives
         self._always_compute_size = always_compute_size
-        if tar is None and os.path.isfile("/usr/bin/tar"):
-            tar = "/usr/bin/tar"
-        elif tar is None:
-            tar = "/bin/tar"
-        self._tar = tar
+
+        self._path_tar = self.get_bin_prefix("tar", tar)
+        self._path_cat = self.get_bin_prefix("cat", cat)
+        self._path_split = self.get_bin_prefix("split", split)
+
+    @staticmethod
+    def get_bin_prefix(name, path: Optional[str] = None):
+        """search a binary in standard paths. $PATH may be not set, but we only use it for basic UNIX tools (tar/cat/split)"""
+        if path is not None:
+            return path
+        for prefix in ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]:
+            path = "%s/%s" % (prefix, name)
+            if os.path.isfile(path):
+                return path
+        return None
 
     @property
     def destination_ip(self):
@@ -215,4 +251,12 @@ class Config:
 
     @property
     def tar(self):
-        return self._tar
+        return self._path_tar
+
+    @property
+    def cat(self):
+        return self._path_cat
+
+    @property
+    def split(self):
+        return self._path_split

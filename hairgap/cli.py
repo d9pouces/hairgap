@@ -22,7 +22,7 @@ from typing import Dict, Optional
 
 from hairgap.receiver import Receiver
 from hairgap.sender import DirectorySender
-from hairgap.utils import Config, now, ensure_dir
+from hairgap.utils import Config, get_arp_cache, now, ensure_dir
 
 
 class SingleDirSender(DirectorySender):
@@ -182,13 +182,41 @@ def populate_send_parser(send_parser):
     send_parser.set_defaults(func=send_directory)
 
 
+def populate_check_parser(check_parser):
+    check_parser.add_argument(
+        "ip",
+        help="destination IP address (cannot be localhost, even for testing purposes)",
+    )
+    check_parser.set_defaults(func=check_arp)
+
+
+def check_arp(args):
+    arp_cache = get_arp_cache()
+    ip = args.ip
+    if ip not in arp_cache:
+        print("unknown IP address: %s" % ip)
+        return
+    print("IP address : %s" % ip)
+    value = arp_cache[ip]
+    print("MAC address : %s" % (value[0] or "invalid"))
+    print("Interface : %s" % (value[1] or "invalid"))
+    if not value[0] or not value[1]:
+        print(
+            "Use arp -s ${DESTINATION_IP} ${DESTINATION_MAC} to populate the ARP cache."
+        )
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.set_defaults(func=missing_command)
     subparsers = parser.add_subparsers()
+
     send_parser = subparsers.add_parser("send")
     populate_send_parser(send_parser)
     receive_parser = subparsers.add_parser("receive")
     populate_receive_parser(receive_parser)
+    check_parser = subparsers.add_parser("check")
+    populate_check_parser(check_parser)
+
     args = parser.parse_args(argv)
     args.func(args)

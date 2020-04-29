@@ -245,7 +245,6 @@ class DirectorySender:
         sha256: Optional[str] = None,
         port: Optional[int] = None,
     ):
-        # FIXME: vérifier avec arp -n que l'IP est connue dans le cache ARP
         if not os.path.isfile(file_abspath):
             logger.warning("Missing file '%s'." % file_abspath)
             raise ValueError("Missing file '%s'" % file_abspath)
