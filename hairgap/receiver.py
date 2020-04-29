@@ -42,6 +42,7 @@ import io
 import logging
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import tarfile
@@ -57,7 +58,7 @@ from hairgap.constants import (
     HAIRGAP_MAGIC_NUMBER_ESCAPE,
     HAIRGAP_MAGIC_NUMBER_INDEX,
 )
-from hairgap.utils import Config, ensure_dir, now, FILENAME_PATTERN
+from hairgap.utils import Config, FILENAME_PATTERN, ensure_dir, now
 
 logger = logging.getLogger("hairgap")
 
@@ -114,6 +115,8 @@ class Receiver:
         # == 0 if there are errors in hairgap (and no file has been created)
         self.current_attributes = {}  # type: Dict[str, str]
         # attributes of the last index
+        self.current_split_status = False
+        # is the last transfer split into chunks?
 
     def receive_file(self, tmp_path) -> Optional[bool]:
         """receive a single file and returns
@@ -195,12 +198,12 @@ class Receiver:
         logger.info("Processing loop exited.")
 
     @staticmethod
-    def is_tar_file(tmp_abspath: str):
+    def is_gz_file(tmp_abspath: str):
         if not os.path.isfile(tmp_abspath):
             return False
         with open(tmp_abspath, "rb") as fd:
-            header = fd.read(270)
-        return header[257 : 257 + 6] == b"ustar "
+            header = fd.read(4)
+        return header[:4] == b"\x1f\x8b\x08\x00"
 
     def process_received_file(self, tmp_abspath: str, valid: bool = True):
         """
@@ -215,7 +218,7 @@ class Receiver:
         if self.config.use_tar_archives or (
             self.config.use_tar_archives is None  # auto-detect mode
             and self.expected_files.empty()
-            and self.is_tar_file(tmp_abspath)
+            and self.is_gz_file(tmp_abspath)
         ):
             try:
                 self.process_received_file_tar(tmp_abspath, valid=valid)
@@ -257,6 +260,7 @@ class Receiver:
                 dst_fd.flush()
                 self.read_index(dst_fd.name)
             self.transfer_start()
+            count = 0
             for member in tar_fd.getmembers():  # type: tarfile.TarInfo
                 if not member.isfile() or member.issym():
                     continue
@@ -270,6 +274,9 @@ class Receiver:
                     actual_sha256=None,
                     tmp_fd=tar_fd.extractfile(member),
                 )
+                count += 1
+            if count == 0:
+                ensure_dir(self.get_current_transfer_directory(), parent=False)
             self.transfer_complete()
         os.remove(tmp_abspath)
 
@@ -298,6 +305,7 @@ class Receiver:
             self.transfer_start()
             if self.expected_files.empty():
                 # empty transfer => we mark it as complete
+                ensure_dir(self.get_current_transfer_directory(), parent=False)
                 self.transfer_complete()
         elif self.expected_files.empty():
             if valid:
@@ -319,6 +327,10 @@ class Receiver:
             )
             if self.expected_files.empty():
                 # all files of the transfer have been received
+                if self.current_split_status:
+                    self.unsplit_received_files(
+                        self.config, self.get_current_transfer_directory()
+                    )
                 self.transfer_complete()
 
     def transfer_start(self):
@@ -346,6 +358,38 @@ class Receiver:
         If None, all received files will be deleted.
         """
         raise NotImplementedError
+
+    @staticmethod
+    def unsplit_received_files(config: Config, dir_abspath):
+        names = os.listdir(dir_abspath)
+        if not names:
+            return
+        folder_1 = os.path.join(dir_abspath, str(uuid.uuid4()))
+        folder_2 = os.path.join(dir_abspath, str(uuid.uuid4()))
+        ensure_dir(folder_1, parent=False)
+        ensure_dir(folder_2, parent=False)
+        for name in names:
+            os.rename(os.path.join(dir_abspath, name), os.path.join(folder_1, name))
+        names.sort()
+        cat_cmd = [config.cat] + names
+        tar_cmd = [config.tar, "xz", "-C", folder_2]
+        esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
+        esc_cat_cmd = [shlex.quote(x) for x in cat_cmd]
+        cmd = "%s | %s" % (" ".join(esc_cat_cmd), " ".join(esc_tar_cmd))
+        p = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            cwd=folder_1,
+        )
+        p.communicate(b"")
+        names = os.listdir(folder_2)
+        for name in names:
+            os.rename(os.path.join(folder_2, name), os.path.join(dir_abspath, name))
+        shutil.rmtree(folder_1)
+        shutil.rmtree(folder_2)
 
     # noinspection PyMethodMayBeStatic
     def transfer_file_unexpected(self, tmp_abspath: str, prefix: bytes = None):
@@ -430,8 +474,11 @@ class Receiver:
 
         self.expected_files = Queue()
         expected_count = 0
+        self.current_split_status = False
         with open(index_abspath) as fd:
             for line in fd:
+                if line == "[splitted_content]\n":
+                    self.current_split_status = True
                 matcher = re.match(FILENAME_PATTERN, line)
                 if matcher:
                     self.expected_files.put((matcher.group(1), matcher.group(2)))

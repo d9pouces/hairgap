@@ -157,7 +157,32 @@ class Config:
         cat: str = None,
         use_tar_archives: Optional[bool] = None,
         always_compute_size: bool = True,
+        split_size: Optional[int] = None,
     ):
+        """
+        
+        :param destination_ip: CEA's hairgap option
+        :param destination_port: CEA's hairgap option
+        :param destination_path: where received files are stored
+        :param end_delay_s: delay between successive sends (in seconds)
+        :param error_chunk_size: CEA's hairgap option
+        :param keepalive_ms: CEA's hairgap option
+        :param max_rate_mbps: CEA's hairgap option
+        :param mem_limit_mb: CEA's hairgap option
+        :param mtu_b: CEA's hairgap option
+        :param timeout_s: CEA's hairgap option
+        :param redundancy: CEA's hairgap option
+        :param hairgapr: path of the 'hairgapr' binary
+        :param hairgaps: path of the 'hairgaps' binary
+        :param tar: path of the 'tar' binary
+        :param split: path of the 'split' binary
+        :param cat: path of the 'cat' binary
+        :param use_tar_archives: send files as a single tar archive
+            can be `None` for the reception (guess the mode using the file headers)
+        :param always_compute_size: always compute the total size of sent files
+        :param split_size: if not None, archive all files in a .tar.gz, split it into chunks of the given size
+            useless if `use_tar_archives`
+        """
         self._destination_ip = destination_ip
         self._destination_port = destination_port
         self._end_delay_s = end_delay_s
@@ -169,11 +194,12 @@ class Config:
         self._destination_path = destination_path
         self._timeout_s = timeout_s
         self._redundancy = redundancy
-        self._hairgapr_path = hairgapr
-        self._hairgaps_path = hairgaps
         self._use_tar_archives = use_tar_archives
+        self._split_size = split_size
         self._always_compute_size = always_compute_size
 
+        self._path_hairgapr = self.get_bin_prefix("hairgapr", hairgapr)
+        self._path_hairgaps = self.get_bin_prefix("hairgaps", hairgaps)
         self._path_tar = self.get_bin_prefix("tar", tar)
         self._path_cat = self.get_bin_prefix("cat", cat)
         self._path_split = self.get_bin_prefix("split", split)
@@ -183,7 +209,7 @@ class Config:
         """search a binary in standard paths. $PATH may be not set, but we only use it for basic UNIX tools (tar/cat/split)"""
         if path is not None:
             return path
-        for prefix in ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]:
+        for prefix in ["/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"]:
             path = "%s/%s" % (prefix, name)
             if os.path.isfile(path):
                 return path
@@ -235,11 +261,11 @@ class Config:
 
     @property
     def hairgapr_path(self):
-        return self._hairgapr_path
+        return self._path_hairgapr
 
     @property
     def hairgaps_path(self):
-        return self._hairgaps_path
+        return self._path_hairgaps
 
     @property
     def use_tar_archives(self):
@@ -260,3 +286,7 @@ class Config:
     @property
     def split(self):
         return self._path_split
+
+    @property
+    def split_size(self):
+        return self._split_size

@@ -92,6 +92,16 @@ How does it work?
 
 Unexpected files (for example, if the index file has been sent before the start of the receive process) are deleted.
 
+
+Transfer modes
+--------------
+
+Three types of transfers are available:
+- an index file is sent, followed by all files, one by one
+- all files (including the index one) are sent as a single tar archive
+- all files are gathered in a single tar.gz archive that is split. Then an index file is sent followed by the chunks.
+
+
 Customize transfers
 -------------------
 

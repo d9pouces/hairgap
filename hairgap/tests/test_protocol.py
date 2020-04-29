@@ -121,23 +121,86 @@ class TestDiodeTransfer(TestCase):
                 actual_content = fd.read()
             self.assertEqual(expected_content, actual_content)
 
-    def test_create_transfer(self):
+    ##################################################################################################################
+    #               Small files
+    ##################################################################################################################
+
+    def test_create_transfer_no_tar_no_split(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             src_path = pkg_resources.resource_filename("hairgap", "tests")
-            self.send_directory(tmp_dir, src_path)
+            self.send_directory(
+                tmp_dir, src_path, use_tar_archives=False, split_size=None
+            )
 
-    def test_create_transfer_tar_archive(self):
+    def test_create_transfer_no_tar_split(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = pkg_resources.resource_filename("hairgap", "tests")
+            self.send_directory(
+                tmp_dir, src_path, use_tar_archives=False, split_size=20000
+            )
+
+    def test_create_transfer_tar(self):
         logging.basicConfig(level=logging.DEBUG)
         with tempfile.TemporaryDirectory() as tmp_dir:
             src_path = pkg_resources.resource_filename("hairgap", "tests")
             self.send_directory(tmp_dir, src_path, use_tar_archives=True)
 
-    def test_send_empty_file(self):
+    ##################################################################################################################
+    #               Empty file
+    ##################################################################################################################
+    def test_send_empty_file_no_tar_split(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             src_path = os.path.join(tmp_dir, "original")
             ensure_dir(src_path, parent=False)
             open(os.path.join(src_path, "empty_file.txt"), "w").close()
-            self.send_directory(tmp_dir, src_path)
+            self.send_directory(
+                tmp_dir, src_path, use_tar_archives=False, split_size=20000
+            )
+
+    def test_send_empty_file_no_tar_no_split(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = os.path.join(tmp_dir, "original")
+            ensure_dir(src_path, parent=False)
+            open(os.path.join(src_path, "empty_file.txt"), "w").close()
+            self.send_directory(
+                tmp_dir, src_path, use_tar_archives=False, split_size=None
+            )
+
+    def test_send_empty_file_tar(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = os.path.join(tmp_dir, "original")
+            ensure_dir(src_path, parent=False)
+            open(os.path.join(src_path, "empty_file.txt"), "w").close()
+            self.send_directory(tmp_dir, src_path, use_tar_archives=True)
+
+    ##################################################################################################################
+    #               Empty directory
+    ##################################################################################################################
+    def test_send_empty_dir_no_tar_split(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = os.path.join(tmp_dir, "original")
+            ensure_dir(src_path, parent=False)
+            self.send_directory(
+                tmp_dir, src_path, use_tar_archives=False, split_size=20000
+            )
+
+    def test_send_empty_dir_no_tar_no_split(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = os.path.join(tmp_dir, "original")
+            ensure_dir(src_path, parent=False)
+            self.send_directory(
+                tmp_dir, src_path, use_tar_archives=False, split_size=None
+            )
+
+    def test_send_empty_dir_tar(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            src_path = os.path.join(tmp_dir, "original")
+            ensure_dir(src_path, parent=False)
+            self.send_directory(tmp_dir, src_path, use_tar_archives=True)
+
+    ##################################################################################################################
+    #               Unexpected file
+    ##################################################################################################################
 
     def test_unexpected_file(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -166,8 +229,16 @@ class TestDiodeTransfer(TestCase):
                     fd.write("%s\n" % value)
             self.send_directory(tmp_dir, src_path)
 
-    def send_directory(self, tmp_dir, original_path, use_tar_archives=True):
-        config = self.get_config(tmp_dir, use_tar_archives=use_tar_archives)
+    def send_directory(
+        self,
+        tmp_dir,
+        original_path,
+        use_tar_archives=True,
+        split_size: Optional[int] = None,
+    ):
+        config = self.get_config(
+            tmp_dir, use_tar_archives=use_tar_archives, split_size=split_size
+        )
         src_path = os.path.join(tmp_dir, "original_copy")
         shutil.copytree(original_path, src_path)
         dst_path = os.path.join(tmp_dir, "destination")
@@ -194,7 +265,9 @@ class TestDiodeTransfer(TestCase):
             self.assertEqual(src_content, dst_content)
 
     @staticmethod
-    def get_config(tmp_dir, use_tar_archives: bool = False):
+    def get_config(
+        tmp_dir, use_tar_archives: bool = False, split_size: Optional[int] = None
+    ):
         src_port = 15124
         while True:
             try:
@@ -218,6 +291,7 @@ class TestDiodeTransfer(TestCase):
             hairgapr=pkg_resources.resource_filename("hairgap.tests", "hairgapr.py"),
             hairgaps=pkg_resources.resource_filename("hairgap.tests", "hairgaps.py"),
             use_tar_archives=use_tar_archives,
+            split_size=split_size,
         )
 
     @staticmethod
