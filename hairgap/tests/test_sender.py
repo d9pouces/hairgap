@@ -59,17 +59,17 @@ class TestSender(TestCase):
             sender = self.create_sender(dirname)
             splitted_path = os.path.join(dirname, "splitted")
             DirectorySender.archive_and_split_directory(
-                sender.config, sender.transfer_abspath, splitted_path, split_size=10000
+                sender.config, sender.transfer_abspath, splitted_path, split_size=12000
             )
-            expected = {"content.tar.gz.ab", "content.tar.gz.aa"}
+            expected = {"content.tar.gz.aa"}
             actual = set(os.listdir(splitted_path))
             self.assertEqual(expected, actual)
 
     def test_split_source_files(self):
         with tempfile.TemporaryDirectory() as dirname:
             sender = self.create_sender(dirname)
-            sender.split_source_files(sender.transfer_abspath, split_size=10000)
-            expected = {"content.tar.gz.ab", "content.tar.gz.aa"}
+            sender.split_source_files(sender.transfer_abspath, split_size=12000)
+            expected = {"content.tar.gz.aa"}
             actual = set(os.listdir(sender.transfer_abspath))
             self.assertEqual(expected, actual)
 
@@ -96,7 +96,6 @@ class TestSender(TestCase):
             "key = value",
             "[splitted_content]",
             "[files]",
-            "2dfba633817046c7f559ed4b93076048435f7e1a90f14eb8035c04b9ebae2537 = content.tar.gz.ab",
         ]
         self.assertEqual(expected, actual)
 
@@ -128,7 +127,7 @@ class TestSender(TestCase):
     def create_sender(
         self,
         dirname,
-        split_size=10000,
+        split_size=15000,
         file_count=10,
         file_size=10000,
         use_tar_archives: bool = False,
