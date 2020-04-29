@@ -83,9 +83,17 @@ class DirectorySender:
         result is always (1, 0) when `config.use_tar_archives` and not `config.always_compute_size` to speed up
 
         """
+        start = time.time()
         if self.use_tar_archives:
-            return self.prepare_directory_tar()
-        return self.prepare_directory_no_tar()
+            r = self.prepare_directory_tar()
+        else:
+            r = self.prepare_directory_no_tar()
+        end = time.time()
+        logger.info(
+            "%s files, %s bytes in %s seconds (%s B/s)"
+            % (r[0], r[1], (end - start), r[1] / (end - start))
+        )
+        return r
 
     def prepare_directory_tar(self) -> Tuple[int, int]:
         logger.info("Preparing '%s' as a single tar archive…" % self.transfer_abspath)
@@ -249,11 +257,16 @@ class DirectorySender:
             )
             raise ValueError("Missing index '%s'" % index_path)
         logger.info("Sending '%s'…" % self.transfer_abspath)
+        start = time.time()
         if self.use_tar_archives:
             self.send_directory_tar(port=port)
         else:
             self.send_directory_no_tar(port=port)
-        logger.info("Directory '%s' sent." % self.transfer_abspath)
+        end = time.time()
+        logger.info(
+            "Directory '%s' sent in %s seconds."
+            % (self.transfer_abspath, (end - start))
+        )
 
     def send_directory_tar(self, port: Optional[int] = None):
         dir_abspath = self.transfer_abspath
