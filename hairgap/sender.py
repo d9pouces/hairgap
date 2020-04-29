@@ -88,7 +88,8 @@ class DirectorySender:
         return self.prepare_directory_no_tar()
 
     def prepare_directory_tar(self) -> Tuple[int, int]:
-        logger.info("Preparing '%s'…" % self.transfer_abspath)
+        logger.info("Preparing '%s' as a single tar archive…" % self.transfer_abspath)
+        ensure_dir(self.index_abspath)
         with open(self.index_abspath, "w") as fd:
             fd.write(HAIRGAP_MAGIC_NUMBER_INDEX)
             fd.write("[hairgap]\n")
@@ -110,72 +111,15 @@ class DirectorySender:
         )
         return total_files, total_size
 
-    @staticmethod
-    def archive_and_split_directory(
-        config: Config,
-        original_path: str,
-        splitted_path: str,
-        split_size: int = 100 * 1000 * 1000,
-        prefix: str = "content.tar.gz.",
-    ):
-        ensure_dir(splitted_path, parent=False)
-        tar_cmd = [config.tar, "czf", "-", "-C", original_path, "."]
-        split_cmd = [
-            config.split,
-            "-b",
-            str(split_size),
-            "-",
-            prefix,
-        ]
-        esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
-        esc_split_cmd = [shlex.quote(x) for x in split_cmd]
-        cmd = "%s | %s" % (" ".join(esc_tar_cmd), " ".join(esc_split_cmd))
-        logger.info("Archive and split '%s' to '%s'…" % (original_path, splitted_path))
-        p = subprocess.Popen(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-            cwd=splitted_path,
-        )
-        p.communicate(b"")
-
-    def split_source_files(self, dir_abspath: str, split_size: int):
-        """transform some files into a single, splitted, archive
-
-        move the content of the source folder in a subfolder
-        create another folder in the same source folder
-        create a tar.gz file with the first subfolder and split it into chunks into the second subfolder
-        remove the first subfolder
-        move the content of the second subfolder to its parent
-        remove the second subfolder"""
-        logger.info("Split '%s' into %s-bytes chunks" % (dir_abspath, split_size))
-        names = os.listdir(dir_abspath)
-        if not names:
-            return
-        folder_1 = os.path.join(dir_abspath, str(uuid.uuid4()))
-        folder_2 = os.path.join(dir_abspath, str(uuid.uuid4()))
-        ensure_dir(folder_1, parent=False)
-        for name in names:
-            os.rename(os.path.join(dir_abspath, name), os.path.join(folder_1, name))
-        self.archive_and_split_directory(
-            self.config, folder_1, folder_2, split_size=split_size
-        )
-        names = os.listdir(folder_2)
-        shutil.rmtree(folder_1)
-        for name in names:
-            os.rename(os.path.join(folder_2, name), os.path.join(dir_abspath, name))
-        shutil.rmtree(folder_2)
-
     def prepare_directory_no_tar(self) -> Tuple[int, int]:
-        logger.info("Preparing '%s'…" % self.transfer_abspath)
+        logger.info("Preparing '%s' as multiple files…" % self.transfer_abspath)
         dir_abspath = self.transfer_abspath
         index_path = self.index_abspath
         if self.config.split_size:
             self.split_source_files(dir_abspath, self.config.split_size)
 
         total_files, total_size = 1, 0
+        ensure_dir(index_path)
         with open(index_path, "w") as fd:
             fd.write(HAIRGAP_MAGIC_NUMBER_INDEX)
             fd.write("[hairgap]\n")
@@ -223,6 +167,69 @@ class DirectorySender:
             % (total_files, total_size, self.transfer_abspath)
         )
         return total_files, total_size
+
+    @staticmethod
+    def archive_and_split_directory(
+        config: Config,
+        original_path: str,
+        splitted_path: str,
+        split_size: int = 100 * 1000 * 1000,
+        prefix: str = "content.tar.gz.",
+    ):
+        ensure_dir(splitted_path, parent=False)
+        tar_cmd = [config.tar, "czf", "-", "-C", original_path, "."]
+        split_cmd = [
+            config.split,
+            "-b",
+            str(split_size),
+            "-",
+            prefix,
+        ]
+        esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
+        esc_split_cmd = [shlex.quote(x) for x in split_cmd]
+        cmd = "%s | %s" % (" ".join(esc_tar_cmd), " ".join(esc_split_cmd))
+        logger.info("Archive and split '%s' to '%s'…" % (original_path, splitted_path))
+        p = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+            cwd=splitted_path,
+        )
+        stdout, stderr = p.communicate(b"")
+        if p.returncode:
+            logger.error("command = %s , return code = %s" % (cmd, p.returncode))
+            logger.error(
+                "stdout = %s\nstderr = %s" % (stdout.decode(), stderr.decode())
+            )
+
+    def split_source_files(self, dir_abspath: str, split_size: int):
+        """transform some files into a single, splitted, archive
+
+        move the content of the source folder in a subfolder
+        create another folder in the same source folder
+        create a tar.gz file with the first subfolder and split it into chunks into the second subfolder
+        remove the first subfolder
+        move the content of the second subfolder to its parent
+        remove the second subfolder"""
+        logger.info("Split '%s' into %s-bytes chunks" % (dir_abspath, split_size))
+        names = os.listdir(dir_abspath)
+        if not names:
+            return
+        folder_1 = os.path.join(dir_abspath, str(uuid.uuid4()))
+        folder_2 = os.path.join(dir_abspath, str(uuid.uuid4()))
+        ensure_dir(folder_1, parent=False)
+        for name in names:
+            os.rename(os.path.join(dir_abspath, name), os.path.join(folder_1, name))
+        self.archive_and_split_directory(
+            self.config, folder_1, folder_2, split_size=split_size
+        )
+        names = os.listdir(folder_2)
+        shutil.rmtree(folder_1)
+        for name in names:
+            os.rename(os.path.join(folder_2, name), os.path.join(dir_abspath, name))
+        shutil.rmtree(folder_2)
 
     def send_directory(self, port: Optional[int] = None):
         """send all files using hairgap.

@@ -384,7 +384,12 @@ class Receiver:
             stdin=subprocess.PIPE,
             cwd=folder_1,
         )
-        p.communicate(b"")
+        stdout, stderr = p.communicate(b"")
+        if p.returncode:
+            logger.error("command = %s , return code = %s" % (cmd, p.returncode))
+            logger.error(
+                "stdout = %s\nstderr = %s" % (stdout.decode(), stderr.decode())
+            )
         names = os.listdir(folder_2)
         for name in names:
             os.rename(os.path.join(folder_2, name), os.path.join(dir_abspath, name))
