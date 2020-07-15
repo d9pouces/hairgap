@@ -162,9 +162,7 @@ class Receiver:
     def receive_loop(self):
         logger.info("Entering receiving loop…")
         while self.continue_loop:
-            tmp_abspath = os.path.join(
-                self.config.destination_path, "receiving", str(uuid.uuid4())
-            )
+            tmp_abspath = self.get_reception_filepath()
             try:
                 r = self.receive_file(tmp_abspath)
             except Exception as e:
@@ -182,6 +180,11 @@ class Receiver:
             else:
                 self.process_received_file(tmp_abspath)
         logger.info("Receiving loop exited.")
+
+    def get_reception_filepath(self):
+        return os.path.join(
+            self.config.destination_path, "receiving", str(uuid.uuid4())
+        )
 
     def process_loop(self):
         logger.info("Entering processing loop…")
