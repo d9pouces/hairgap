@@ -96,10 +96,16 @@ Unexpected files (for example, if the index file has been sent before the start 
 Transfer modes
 --------------
 
-Three types of transfers are available:
-- an index file is sent, followed by all files, one by one
-- all files (including the index one) are sent as a single tar archive
+Three transfer modes are available:
+
+- an index file is sent, followed by all files, one by one,
+- all files (including the index one) are sent as a single tar archive (created on the fly),
 - all files are gathered in a single tar.gz archive that is split. Then an index file is sent followed by the chunks.
+
+The first one does not require extra storage (but remember that files can be modified in place since empty files cannot be sent)
+but can be very slow if many files are sent (due to the 3-second sleep after each transfer).
+The second one is the most efficient but requires to send potentially very large files.
+The third one is a trade-off between these methods, limiting the number of files to transfer and their size.
 
 
 Customize transfers

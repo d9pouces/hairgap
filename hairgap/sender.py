@@ -242,6 +242,8 @@ class DirectorySender:
     def send_directory(self, port: Optional[int] = None):
         """send all files using hairgap.
 
+        :param port: the port to send to, overriding the default config
+
         raise ValueError in case of error on the index or the directory to send"""
         dir_abspath = self.transfer_abspath
         index_path = self.index_abspath
@@ -269,6 +271,10 @@ class DirectorySender:
         )
 
     def send_directory_tar(self, port: Optional[int] = None):
+        """send all files using hairgap, using the tar method.
+
+        :param port: the port to send to, overriding the default config
+        """
         dir_abspath = self.transfer_abspath
         index_path = self.index_abspath
         tar_cmd = [

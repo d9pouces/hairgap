@@ -237,8 +237,10 @@ class Receiver:
         """
         process a tar.gz archive.
         a single file and a single directory are expected at the root of the received archive
+
         :param tmp_abspath:
         :param valid:
+
         :return:
         """
         if not valid:
