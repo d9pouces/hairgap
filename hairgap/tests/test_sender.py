@@ -25,7 +25,7 @@ from hairgap.sender import DirectorySender
 from hairgap.utils import Config, ensure_dir
 
 
-class TestingDirectorySender(DirectorySender):
+class DemoDirectorySender(DirectorySender):
     def __init__(self, config: Config, dirname: str):
         super().__init__(config)
         self.config = config
@@ -135,7 +135,7 @@ class TestSender(TestCase):
         config = self.get_config(
             dirname, use_tar_archives=use_tar_archives, split_size=split_size
         )
-        sender = TestingDirectorySender(config, dirname)
+        sender = DemoDirectorySender(config, dirname)
         sender.create_files(file_count=file_count, file_size=file_size)
         return sender
 
