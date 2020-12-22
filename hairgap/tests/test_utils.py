@@ -16,6 +16,8 @@
 import os
 from unittest import TestCase
 
+import pkg_resources
+
 from hairgap.utils import Config, get_arp_cache
 
 
@@ -28,6 +30,12 @@ class TestUtils(TestCase):
         self.assertTrue(os.path.isfile(c.tar))
         self.assertTrue(os.path.isfile(c.split))
         self.assertTrue(os.path.isfile(c.cat))
+        platform = pkg_resources.get_platform()
+        if platform == "linux-x86_64":
+            self.assertTrue(os.path.isfile(c.hairgapr_path))
+            self.assertTrue(os.path.isfile(c.hairgaps_path))
+        else:
+            print("Unknown platform : %s" % platform)
 
     def test_parse_arp(self):
         value = """Address                  HWtype  HWaddress           Flags Mask            Iface

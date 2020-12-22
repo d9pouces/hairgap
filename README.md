@@ -25,7 +25,7 @@ arp -s ${DESTINATION_IP} ${DESTINATION_MAC}
 ```
 First, you must start the receiver on the destination side:
 ```bash
-pip3 install hairgap
+python3 -m pip install hairgap
 
 DESTINATION_IP="the IP address of the destination machine"
 pyhairgap receive ${DESTINATION_IP} directory/
@@ -34,10 +34,20 @@ pyhairgap receive ${DESTINATION_IP} directory/
 
 Then you can send directories:
 ```bash
-pip3 install hairgap
+python3 -m pip install hairgap
 
 DESTINATION_IP="the IP address of the destination machine"
 pyhairgap send ${DESTINATION_IP} directory/
 
 ```
 
+Hairgap binaries
+----------------
+
+You need to compile hairgap binaires yourself since no official package exists.
+However, a Python package (`hairgap-binaries`) has been created to distribute precompiled binaries for Linux x86_64.
+This package is automatically detected and used.
+
+```bash
+python3 -m pip install hairgap-binaries
+```

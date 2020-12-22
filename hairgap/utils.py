@@ -12,6 +12,18 @@ import os
 import re
 import subprocess
 from typing import Dict, Optional, Tuple
+try:
+    from hairgap_binaries import get_hairgapr, get_hairgaps
+except ImportError:
+
+    def get_hairgapr():
+        return None
+
+    def get_hairgaps():
+        return None
+
+DEFAULT_HAIRGAPR = get_hairgapr() or "hairgapr"
+DEFAULT_HAIRGAPS = get_hairgaps() or "hairgaps"
 
 FILENAME_PATTERN = r"([a-fA-F\d]{64}) = (.*)$"
 
@@ -150,8 +162,8 @@ class Config:
         mtu_b: Optional[int] = None,
         timeout_s: float = 3.0,
         redundancy: float = 3.0,
-        hairgapr: str = "hairgapr",
-        hairgaps: str = "hairgaps",
+        hairgapr: str = DEFAULT_HAIRGAPR,
+        hairgaps: str = DEFAULT_HAIRGAPS,
         tar: str = None,
         split: str = None,
         cat: str = None,
