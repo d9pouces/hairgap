@@ -291,7 +291,7 @@ class DirectorySender:
         # we use gzip, not for compression (most files are probably already compressed) but for the CRC checksum
         # we cannot use more efficient algorithms like xz/bz2 (they cannot compress streams)
         logger.info("Sending %s via hairgap …" % dir_abspath)
-        hairgap_cmd = DirectorySender.get_hairgap_command(self.config, port)
+        hairgap_cmd = self.get_hairgap_command(self.config, port)
         logger.debug("hairgaps command: %s" % " ".join(hairgap_cmd))
         logger.debug("tar command: %s" % " ".join(tar_cmd))
         esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
@@ -330,8 +330,9 @@ class DirectorySender:
                     self.config, file_abspath, sha256=actual_sha256, port=port
                 )
 
-    @staticmethod
+    @classmethod
     def send_file(
+        cls,
         config: Config,
         file_abspath: str,
         sha256: Optional[str] = None,
@@ -360,7 +361,7 @@ class DirectorySender:
                 port or config.destination_port,
             )
         logger.info(msg)
-        cmd = DirectorySender.get_hairgap_command(config, port)
+        cmd = cls.get_hairgap_command(config, port)
         logger.info(" ".join(cmd))
         with open(file_abspath, "rb") as tmp_fd:
             p = subprocess.Popen(
