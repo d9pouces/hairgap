@@ -13,14 +13,6 @@
 #  or https://cecill.info/licences/Licence_CeCILL-B_V1-fr.txt (French)         #
 #                                                                              #
 # ##############################################################################
-
-# ##############################################################################
-#  This file is part of Interdiode                                             #
-#                                                                              #
-#  Copyright (C) 2020 Matthieu Gallet <matthieu.gallet@19pouces.net>           #
-#  All Rights Reserved                                                         #
-#                                                                              #
-# ##############################################################################
 import logging
 import os
 import shutil
