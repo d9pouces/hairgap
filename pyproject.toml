@@ -42,10 +42,10 @@ minversion = 3.4.0
 
 [testenv:py]
 commands =
-  docker run --rm -v {env:PWD}:/src python:3.12 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade && cd /src && pytest'
-  docker run --rm -v {env:PWD}:/src python:3.11 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade && cd /src && pytest'
-  docker run --rm -v {env:PWD}:/src python:3.10 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade && cd /src && pytest'
-  docker run --rm -v {env:PWD}:/src python:3.9 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade && cd /src && pytest'
+  docker run --rm -v {env:PWD}:/src python:3.12 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
+  docker run --rm -v {env:PWD}:/src python:3.11 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
+  docker run --rm -v {env:PWD}:/src python:3.10 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
+  docker run --rm -v {env:PWD}:/src python:3.9 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
 allowlist_externals =
     docker
 
