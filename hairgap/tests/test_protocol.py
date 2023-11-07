@@ -13,19 +13,19 @@
 #  or https://cecill.info/licences/Licence_CeCILL-B_V1-fr.txt (French)         #
 #                                                                              #
 # ##############################################################################
+import importlib.resources
 import logging
 import os
 import shutil
 import socket
 import tempfile
-import time
 import uuid
 from tempfile import TemporaryDirectory
 from threading import Thread
 from typing import Dict, Optional
 from unittest import TestCase
 
-import pkg_resources
+import time
 
 from hairgap.constants import (
     HAIRGAP_MAGIC_NUMBER_EMPTY,
@@ -34,6 +34,7 @@ from hairgap.constants import (
 )
 from hairgap.receiver import Receiver
 from hairgap.sender import DirectorySender
+from hairgap.tests.test_utils import get_filename
 from hairgap.utils import Config, ensure_dir, now
 
 
@@ -97,18 +98,19 @@ class TestDiodeTransfer(TestCase):
     def test_send_file(self):
         with TemporaryDirectory() as tmp_dir:
             config = self.get_config(tmp_dir)
-            src_path = pkg_resources.resource_filename("hairgap.tests", "__init__.py")
+            ref = importlib.resources.files("hairgap").joinpath("tests/__init__.py")
             dst_path = os.path.join(tmp_dir, "received.txt")
 
             process_thread = Thread(target=self.receive_file, args=(config, dst_path))
             process_thread.start()
             time.sleep(1.0)
             sender = SingleDirSender(config, os.path.join(tmp_dir, "source"))
-            sender.send_file(config, src_path)
-            time.sleep(1.0)
-            self.assertTrue(os.path.isfile(dst_path))
-            with open(src_path) as fd:
-                expected_content = fd.read()
+            with importlib.resources.as_file(ref) as src_path:
+                sender.send_file(config, str(src_path))
+                time.sleep(1.0)
+                self.assertTrue(os.path.isfile(dst_path))
+                with open(src_path) as fd:
+                    expected_content = fd.read()
             with open(dst_path) as fd:
                 actual_content = fd.read()
             self.assertEqual(expected_content, actual_content)
@@ -119,23 +121,26 @@ class TestDiodeTransfer(TestCase):
 
     def test_create_transfer_no_tar_no_split(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
-            src_path = pkg_resources.resource_filename("hairgap", "tests")
-            self.send_directory(
-                tmp_dir, src_path, use_tar_archives=False, split_size=None
-            )
+            ref = importlib.resources.files("hairgap").joinpath("tests")
+            with importlib.resources.as_file(ref) as src_path:
+                self.send_directory(
+                    tmp_dir, str(src_path), use_tar_archives=False, split_size=None
+                )
 
     def test_create_transfer_no_tar_split(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
-            src_path = pkg_resources.resource_filename("hairgap", "tests")
-            self.send_directory(
-                tmp_dir, src_path, use_tar_archives=False, split_size=20000
-            )
+            ref = importlib.resources.files("hairgap").joinpath("tests")
+            with importlib.resources.as_file(ref) as src_path:
+                self.send_directory(
+                    tmp_dir, str(src_path), use_tar_archives=False, split_size=20000
+                )
 
     def test_create_transfer_tar(self):
         logging.basicConfig(level=logging.DEBUG)
         with tempfile.TemporaryDirectory() as tmp_dir:
-            src_path = pkg_resources.resource_filename("hairgap", "tests")
-            self.send_directory(tmp_dir, src_path, use_tar_archives=True)
+            ref = importlib.resources.files("hairgap").joinpath("tests")
+            with importlib.resources.as_file(ref) as src_path:
+                self.send_directory(tmp_dir, str(src_path), use_tar_archives=True)
 
     ##########################################################################
     #               Empty file
@@ -268,6 +273,7 @@ class TestDiodeTransfer(TestCase):
                 break
             except OSError:
                 src_port += 1
+
         return Config(
             destination_ip="localhost",
             destination_port=src_port,
@@ -280,8 +286,8 @@ class TestDiodeTransfer(TestCase):
             mtu_b=None,
             timeout_s=3.0,
             redundancy=3.0,
-            hairgapr=pkg_resources.resource_filename("hairgap.tests", "hairgapr.py"),
-            hairgaps=pkg_resources.resource_filename("hairgap.tests", "hairgaps.py"),
+            hairgapr=get_filename("hairgapr.py"),
+            hairgaps=get_filename("hairgaps.py"),
             use_tar_archives=use_tar_archives,
             split_size=split_size,
         )

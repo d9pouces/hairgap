@@ -37,14 +37,16 @@ pyhairgap = 'hairgap.cli:main'
 legacy_tox_ini = """
 
 [tox:tox]
-envlist = py37-test,py38-test,py39-test,py310-test,py311-test,py312-test
+envlist = py
 minversion = 3.4.0
 
-[testenv]
-commands = pytest
-deps = pytest
-setenv =
-    PYTHONDEVMODE = 1
-    PYTHONHASHSEED = 28739944
+[testenv:py]
+commands =
+  docker run --rm -v {env:PWD}:/src python:3.12 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade && cd /src && pytest'
+  docker run --rm -v {env:PWD}:/src python:3.11 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade && cd /src && pytest'
+  docker run --rm -v {env:PWD}:/src python:3.10 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade && cd /src && pytest'
+  docker run --rm -v {env:PWD}:/src python:3.9 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade && cd /src && pytest'
+allowlist_externals =
+    docker
 
 """

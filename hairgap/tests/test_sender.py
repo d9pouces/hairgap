@@ -19,9 +19,8 @@ import tempfile
 from typing import Dict
 from unittest import TestCase
 
-import pkg_resources
-
 from hairgap.sender import DirectorySender
+from hairgap.tests.test_utils import get_filename
 from hairgap.utils import Config, ensure_dir
 
 
@@ -163,8 +162,8 @@ class TestSender(TestCase):
             mtu_b=None,
             timeout_s=3.0,
             redundancy=3.0,
-            hairgapr=pkg_resources.resource_filename("hairgap.tests", "hairgapr.py"),
-            hairgaps=pkg_resources.resource_filename("hairgap.tests", "hairgaps.py"),
+            hairgapr=get_filename("hairgapr.py"),
+            hairgaps=get_filename("hairgaps.py"),
             use_tar_archives=use_tar_archives,
             split_size=split_size,
         )

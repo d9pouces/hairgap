@@ -13,12 +13,22 @@
 #  or https://cecill.info/licences/Licence_CeCILL-B_V1-fr.txt (French)         #
 #                                                                              #
 # ##############################################################################
+import importlib.resources
 import os
+from contextlib import ExitStack
+from sysconfig import get_platform
 from unittest import TestCase
 
-import pkg_resources
+import atexit
 
 from hairgap.utils import Config, get_arp_cache
+
+
+def get_filename(name: str) -> str:
+    file_manager = ExitStack()
+    atexit.register(file_manager.close)
+    ref = importlib.resources.files("hairgap").joinpath(f"tests/{name}")
+    return str(file_manager.enter_context(importlib.resources.as_file(ref)))
 
 
 class TestUtils(TestCase):
@@ -30,7 +40,7 @@ class TestUtils(TestCase):
         self.assertTrue(os.path.isfile(c.tar))
         self.assertTrue(os.path.isfile(c.split))
         self.assertTrue(os.path.isfile(c.cat))
-        platform = pkg_resources.get_platform()
+        platform = get_platform()
         if platform == "linux-x86_64":
             self.assertTrue(os.path.isfile(c.hairgapr_path))
             self.assertTrue(os.path.isfile(c.hairgaps_path))

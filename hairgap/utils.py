@@ -128,7 +128,7 @@ def ensure_dir(path, parent=True):
 
 
 def now():
-    return datetime.datetime.utcnow().replace(tzinfo=utc)
+    return datetime.datetime.now(utc)
 
 
 def get_arp_cache(content=None) -> Dict[str, Tuple[Optional[str], Optional[str]]]:

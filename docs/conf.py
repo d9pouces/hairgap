@@ -12,20 +12,16 @@ serve to show the default. """
 __author__ = "Matthieu Gallet"
 
 import os.path
+from importlib.metadata import PackageNotFoundError, version as get_version
 
 #
-import re
 import sys
 
-import pkg_resources
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-version = None
-with open(pkg_resources.resource_filename("hairgap", "__init__.py")) as fd:
-    for line in fd:
-        matcher = re.match(r"""^__version__\s*=\s*['"](.*)['"]\s*$""", line)
-        version = version or matcher and matcher.group(1)
-
+try:
+    version = get_version("hairgap")
+except PackageNotFoundError:
+    version = "1.0.0"
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
