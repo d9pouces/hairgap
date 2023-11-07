@@ -1,0 +1,50 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool.poetry]
+authors = ["Matthieu Gallet <github@19pouces.net>"]
+classifiers = [
+  'Development Status :: 5 - Production/Stable',
+  'License :: OSI Approved :: CEA CNRS Inria Logiciel Libre License, version 2.1 (CeCILL-2.1)',
+  'Operating System :: POSIX :: Linux',
+  'Operating System :: Unix',
+  'Natural Language :: English',
+  'Natural Language :: French',
+  'Programming Language :: Python :: 3 :: Only',
+  'Programming Language :: Python :: 3.6',
+  'Programming Language :: Python :: 3.7',
+  'Programming Language :: Python :: 3.8',
+  'Programming Language :: Python :: 3.9',
+  'Programming Language :: Python :: 3.10',
+  'Programming Language :: Python :: 3.11',
+  'Programming Language :: Python :: 3.12'
+]
+description = "Basic protocol to send files using the hairgap binary ( github.com/cea-sec/hairgap )."
+documentation = 'https://github.com/d9pouces/hairgap'
+license = "CeCILL-B"
+maintainers = ["Matthieu Gallet <github@19pouces.net>"]
+name = "hairgap"
+packages = [{include = "hairgap"}]
+readme = "README.md"
+repository = 'https://github.com/d9pouces/hairgap'
+version = "1.2.0"
+
+[tool.poetry.scripts]
+pyhairgap = 'hairgap.cli:main'
+
+[tool.tox]
+legacy_tox_ini = """
+
+[tox:tox]
+envlist = py37-test,py38-test,py39-test,py310-test,py311-test,py312-test
+minversion = 3.4.0
+
+[testenv]
+commands = pytest
+deps = pytest
+setenv =
+    PYTHONDEVMODE = 1
+    PYTHONHASHSEED = 28739944
+
+"""

@@ -20,6 +20,7 @@ import os
 import re
 import subprocess
 from typing import Dict, Optional, Tuple
+
 try:
     from hairgap_binaries import get_hairgapr, get_hairgaps
 except ImportError:
@@ -29,6 +30,7 @@ except ImportError:
 
     def get_hairgaps():
         return None
+
 
 DEFAULT_HAIRGAPR = get_hairgapr() or "hairgapr"
 DEFAULT_HAIRGAPS = get_hairgaps() or "hairgaps"
@@ -132,7 +134,8 @@ def now():
 def get_arp_cache(content=None) -> Dict[str, Tuple[Optional[str], Optional[str]]]:
     if content is None:
         env = {**os.environ, **{"LC_ALL": "en_US.UTF-8"}}
-        content = subprocess.check_output(["arp", "-n"], env=env, encoding="utf-8")
+        cmd = ["arp", "-n"]
+        content = subprocess.check_output(cmd, env=env, encoding="utf-8")  # nosec
     r = {}
     lines = content.splitlines()
     matcher = re.match(
@@ -180,7 +183,7 @@ class Config:
         split_size: Optional[int] = None,
     ):
         """
-        
+
         :param destination_ip: CEA's hairgap option
         :param destination_port: CEA's hairgap option
         :param destination_path: where received files are stored

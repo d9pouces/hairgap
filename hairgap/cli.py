@@ -23,7 +23,7 @@ from typing import Dict, Optional
 
 from hairgap.receiver import Receiver
 from hairgap.sender import DirectorySender
-from hairgap.utils import Config, get_arp_cache, now, ensure_dir
+from hairgap.utils import Config, ensure_dir, get_arp_cache, now
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,9 @@ def populate_receive_parser(receive_parser):
         help="avoid multithreading. Only if small files are expected!",
     )
     receive_parser.add_argument(
-        "--mem-limit-mb", "-m", type=float,
+        "--mem-limit-mb",
+        "-m",
+        type=float,
     )
     receive_parser.add_argument(
         "--tmp-path",

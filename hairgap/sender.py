@@ -32,7 +32,7 @@ from hairgap.constants import (
     HAIRGAP_MAGIC_NUMBER_ESCAPE,
     HAIRGAP_MAGIC_NUMBER_INDEX,
 )
-from hairgap.utils import Config, FILENAME_PATTERN, ensure_dir
+from hairgap.utils import FILENAME_PATTERN, Config, ensure_dir
 
 logger = logging.getLogger("hairgap")
 
@@ -74,7 +74,7 @@ class DirectorySender:
 
     @property
     def index_abspath(self):
-        """returns the absolute path of the index file to create """
+        """returns the absolute path of the index file to create"""
         raise NotImplementedError
 
     @property
@@ -163,9 +163,8 @@ class DirectorySender:
                     # to escape by HAIRGAP_MAGIC_NUMBER_ESCAPE
                     # maybe not very efficient, but such files are expected to be small
                     if prefix in HAIRGAP_PREFIXES:
-                        escaped_file_abspath = file_abspath + ".%s" % random.randint(
-                            100000, 1000000 - 1
-                        )
+                        suffix = random.randint(100000, 1000000 - 1)  # nosec
+                        escaped_file_abspath = f"{file_abspath}.{suffix}"
                         with open(escaped_file_abspath, "wb") as fd_out:
                             fd_out.write(HAIRGAP_MAGIC_NUMBER_ESCAPE.encode())
                             with open(file_abspath, "rb") as fd_in:
@@ -179,8 +178,8 @@ class DirectorySender:
                     total_files += 1
         total_size += os.path.getsize(index_path)
         logger.info(
-            "%s file(s), %s byte(s), prepared in '%s'."
-            % (total_files, total_size, self.transfer_abspath)
+            "%s file(s), %s byte(s), prepared in '%s'.",
+            (total_files, total_size, self.transfer_abspath),
         )
         return total_files, total_size
 
@@ -206,8 +205,8 @@ class DirectorySender:
         cmd = "%s | %s" % (" ".join(esc_tar_cmd), " ".join(esc_split_cmd))
         logger.info("Archive and split '%s' to '%s'…" % (original_path, splitted_path))
         p = subprocess.Popen(
-            cmd,
-            shell=True,
+            cmd,  # nosec
+            shell=True,  # nosec
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,
@@ -307,7 +306,7 @@ class DirectorySender:
         cmd = "%s|%s" % (" ".join(esc_tar_cmd), " ".join(esc_hairgap_cmd))
         p = subprocess.Popen(
             cmd,
-            shell=True,
+            shell=True,  # nosec
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,

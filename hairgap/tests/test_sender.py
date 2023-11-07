@@ -38,14 +38,16 @@ class DemoDirectorySender(DirectorySender):
 
     @property
     def index_abspath(self):
-        """returns the absolute path of the index file to create """
+        """returns the absolute path of the index file to create"""
         return os.path.join(self.root_directory, "index.txt")
 
     def get_attributes(self) -> Dict[str, str]:
         return {"key": "value"}
 
     def create_files(
-        self, file_count=10, file_size=10000,
+        self,
+        file_count=10,
+        file_size=10000,
     ):
         ensure_dir(self.transfer_abspath, parent=False)
         for i in range(file_count):

@@ -66,7 +66,7 @@ from hairgap.constants import (
     HAIRGAP_MAGIC_NUMBER_ESCAPE,
     HAIRGAP_MAGIC_NUMBER_INDEX,
 )
-from hairgap.utils import Config, FILENAME_PATTERN, ensure_dir, now
+from hairgap.utils import FILENAME_PATTERN, Config, ensure_dir, now
 
 logger = logging.getLogger("hairgap")
 
@@ -390,8 +390,8 @@ class Receiver:
         esc_cat_cmd = [shlex.quote(x) for x in cat_cmd]
         cmd = "%s | %s" % (" ".join(esc_cat_cmd), " ".join(esc_tar_cmd))
         p = subprocess.Popen(
-            cmd,
-            shell=True,
+            cmd,  # nosec
+            shell=True,  # nosec
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdin=subprocess.PIPE,
