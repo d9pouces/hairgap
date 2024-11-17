@@ -13,5 +13,3 @@
 #  or https://cecill.info/licences/Licence_CeCILL-B_V1-fr.txt (French)         #
 #                                                                              #
 # ##############################################################################
-"""base file"""
-__version__ = "1.1.9"

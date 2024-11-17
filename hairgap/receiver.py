@@ -28,6 +28,7 @@ Both functions can be serialized (only if we assume that the process_file functi
 but can also be run in separate threads for handling large files.
 
 """
+
 # ##############################################################################
 #  This file is part of Hairgap                                                #
 #                                                                              #
@@ -59,7 +60,7 @@ import time
 import uuid
 from queue import Empty, Queue
 from threading import Thread
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, List
 
 from hairgap.constants import (
     HAIRGAP_MAGIC_NUMBER_EMPTY,
@@ -68,7 +69,7 @@ from hairgap.constants import (
 )
 from hairgap.utils import FILENAME_PATTERN, Config, ensure_dir, now
 
-logger = logging.getLogger("hairgap")
+logger = logging.getLogger(__name__)
 
 
 class Receiver:
@@ -132,7 +133,7 @@ class Receiver:
         False if hairgap did raise an error but Ctrl-C
         None if hairgap was terminated by Ctrl-C
         """
-        logger.info("Receiving %s via hairgap…" % tmp_path)
+        logger.info("receiving '%s' via hairgap…", tmp_path)
         ensure_dir(tmp_path, parent=True)
         with open(tmp_path, "wb") as fd:
             cmd = [
@@ -148,27 +149,28 @@ class Receiver:
             self.hairgap_subprocess = subprocess.Popen(
                 cmd, stdout=fd, stderr=subprocess.PIPE
             )
-            logger.debug("hairgapr command: %s" % " ".join(cmd))
+            logger.debug("hairgapr command: '%s'.", " ".join(cmd))
             __, stderr = self.hairgap_subprocess.communicate()
             fd.flush()
         returncode = self.hairgap_subprocess.returncode
         if returncode == 0:
             self.hairgap_subprocess = None
-            logger.info("%s received via hairgap." % tmp_path)
+            logger.info("'%s' received via hairgap.", tmp_path)
             return True
         if returncode == -2:
-            logger.info("Exiting hairgap…")
+            logger.info("exiting hairgap…")
             return None
         else:
             logger.warning(
-                "An error %d was encountered by hairgap: \n%s"
-                % (returncode, stderr.decode())
+                "an error %d was encountered by hairgap: \n%s",
+                returncode,
+                stderr.decode(),
             )
         self.hairgap_subprocess = None
         return False
 
     def receive_loop(self):
-        logger.info("Entering receiving loop…")
+        logger.info("entering receiving loop…")
         while self.continue_loop:
             tmp_abspath = self.get_reception_filepath()
             try:
@@ -187,7 +189,7 @@ class Receiver:
                 self.process_queue.put((bool(r), tmp_abspath))
             else:
                 self.process_received_file(tmp_abspath)
-        logger.info("Receiving loop exited.")
+        logger.info("receiving loop exited.")
 
     def get_reception_filepath(self):
         return os.path.join(
@@ -195,7 +197,7 @@ class Receiver:
         )
 
     def process_loop(self):
-        logger.info("Entering processing loop…")
+        logger.info("entering processing loop…")
         while self.continue_loop:
             try:
                 valid, tmp_abspath = self.process_queue.get(timeout=1)
@@ -204,9 +206,9 @@ class Receiver:
                 # the timeout is required to quit the thread when self.continue_loop is False
                 continue
             except Exception as e:
-                logger.exception(e)
+                logger.exception("an error has been encountered: %s", e)
                 time.sleep(1)
-        logger.info("Processing loop exited.")
+        logger.info("processing loop exited.")
 
     @staticmethod
     def is_gz_file(tmp_abspath: str):
@@ -234,8 +236,9 @@ class Receiver:
             try:
                 self.process_received_file_tar(tmp_abspath, valid=valid)
             except Exception as e:
-                logger.exception(e)
-                logger.error("Invalid tar.gz file: %s (removed)" % tmp_abspath)
+                logger.exception(
+                    "invalid tar.gz  '%s' file (removed): %s.", tmp_abspath, e
+                )
                 if os.path.isfile(tmp_abspath):
                     os.remove(tmp_abspath)
         else:
@@ -262,7 +265,7 @@ class Receiver:
                     index_member = member
                     break
             if index_member is None:
-                logger.error("index file not found in %s")
+                logger.error("index file not found in '%s'.", tmp_abspath)
                 return
             # /!\ the index file must be read before extracting other files
             with tempfile.NamedTemporaryFile() as dst_fd:
@@ -374,7 +377,7 @@ class Receiver:
 
     @staticmethod
     def unsplit_received_files(config: Config, dir_abspath):
-        names = os.listdir(dir_abspath)
+        names: List[str] = os.listdir(dir_abspath)
         if not names:
             return
         folder_1 = os.path.join(dir_abspath, str(uuid.uuid4()))
@@ -399,10 +402,8 @@ class Receiver:
         )
         stdout, stderr = p.communicate(b"")
         if p.returncode:
-            logger.error("command = %s , return code = %s" % (cmd, p.returncode))
-            logger.error(
-                "stdout = %s\nstderr = %s" % (stdout.decode(), stderr.decode())
-            )
+            logger.error("command = %s , return code = %s", cmd, p.returncode)
+            logger.error("stdout = %s\nstderr = %s", stdout.decode(), stderr.decode())
         names = os.listdir(folder_2)
         for name in names:
             os.rename(os.path.join(folder_2, name), os.path.join(dir_abspath, name))
@@ -416,9 +417,9 @@ class Receiver:
         :param tmp_abspath: absolute path of the received file
         :param prefix: is the first bytes of the received file."""
         if prefix is None:
-            logger.error("Unexpected file received")
+            logger.error("unexpected file received")
         else:
-            logger.error("Unexpected file received, starting by %r." % prefix)
+            logger.error("unexpected file received, starting by %r.", prefix)
         if os.path.isfile(tmp_abspath):
             os.remove(tmp_abspath)
 
@@ -454,7 +455,7 @@ class Receiver:
                         size += len(data)
                     tmp_fd.close()
             else:
-                logger.warning("No receive path defined: ignoring %s." % file_relpath)
+                logger.warning("no receive path defined: ignoring '%s'.", file_relpath)
         elif os.path.isfile(tmp_abspath):
             size = os.path.getsize(tmp_abspath)
             self.transfer_received_count += 1
@@ -464,7 +465,7 @@ class Receiver:
                 ensure_dir(file_abspath, parent=True)
                 shutil.move(tmp_abspath, file_abspath)
             else:
-                logger.warning("No receive path defined: removing %s." % tmp_abspath)
+                logger.warning("no receive path defined: removing '%s'.", tmp_abspath)
                 os.remove(tmp_abspath)
         else:
             size = 0
@@ -476,18 +477,18 @@ class Receiver:
             "s": size,
         }
         if actual_sha256 == expected_sha256:
-            logger.info("Received file %(f)s [sha256=%(es)s, size=%(s)s]." % values)
+            logger.info("received file %(f)s [sha256=%(es)s, size=%(s)s]." % values)
             self.transfer_success_count += 1
         else:
             logger.warning(
-                "Received file %(f)s [sha256=%(as)s instead of sha256=%(es)s, size=%(s)s]."
+                "received file %(f)s [sha256=%(as)s instead of sha256=%(es)s, size=%(s)s]."
                 % values
             )
             self.transfer_error_count += 1
 
     def read_index(self, index_abspath):
         self.transfer_start_time = now()
-        logger.info("Reading received index…")
+        logger.info("reading received index…")
         self.current_attributes = {x: None for x in self.available_attributes}
 
         self.expected_files = Queue()
@@ -512,7 +513,7 @@ class Receiver:
         self.transfer_received_count = 1
         self.transfer_success_count = 1
         self.transfer_error_count = 0
-        logger.info("Index read: expecting %s file(s)." % expected_count)
+        logger.info("index read: expecting %s file(s).", expected_count)
 
     def loop(self):
         if self.threading:

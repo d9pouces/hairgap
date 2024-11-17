@@ -34,7 +34,7 @@ from hairgap.constants import (
 )
 from hairgap.utils import FILENAME_PATTERN, Config, ensure_dir
 
-logger = logging.getLogger("hairgap")
+logger = logging.getLogger(__name__)
 
 HAIRGAP_PREFIXES = {
     HAIRGAP_MAGIC_NUMBER_INDEX.encode(),
@@ -98,13 +98,16 @@ class DirectorySender:
             r = self.prepare_directory_no_tar()
         end = time.time()
         logger.info(
-            "%s files, %s bytes in %s seconds (%s B/s)"
-            % (r[0], r[1], (end - start), r[1] / (end - start))
+            "%s files, %s bytes in %s seconds (%s B/s)",
+            r[0],
+            r[1],
+            (end - start),
+            r[1] / (end - start),
         )
         return r
 
     def prepare_directory_tar(self) -> Tuple[int, int]:
-        logger.info("Preparing '%s' as a single tar archive…" % self.transfer_abspath)
+        logger.info("preparing '%s' as a single tar archive…", self.transfer_abspath)
         ensure_dir(self.index_abspath)
         with open(self.index_abspath, "w") as fd:
             fd.write(HAIRGAP_MAGIC_NUMBER_INDEX)
@@ -122,13 +125,15 @@ class DirectorySender:
                         total_files += 1
                         total_size += os.path.getsize(file_abspath)
         logger.info(
-            "%s file(s), %s byte(s), prepared in '%s'."
-            % (total_files, total_size, self.transfer_abspath)
+            "%s file(s), %s byte(s), prepared in '%s'.",
+            total_files,
+            total_size,
+            self.transfer_abspath,
         )
         return total_files, total_size
 
     def prepare_directory_no_tar(self) -> Tuple[int, int]:
-        logger.info("Preparing '%s' as multiple files…" % self.transfer_abspath)
+        logger.info("preparing '%s' as multiple files…", self.transfer_abspath)
         dir_abspath = self.transfer_abspath
         index_path = self.index_abspath
         if self.config.split_size:
@@ -179,7 +184,9 @@ class DirectorySender:
         total_size += os.path.getsize(index_path)
         logger.info(
             "%s file(s), %s byte(s), prepared in '%s'.",
-            (total_files, total_size, self.transfer_abspath),
+            total_files,
+            total_size,
+            self.transfer_abspath,
         )
         return total_files, total_size
 
@@ -203,7 +210,7 @@ class DirectorySender:
         esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
         esc_split_cmd = [shlex.quote(x) for x in split_cmd]
         cmd = "%s | %s" % (" ".join(esc_tar_cmd), " ".join(esc_split_cmd))
-        logger.info("Archive and split '%s' to '%s'…" % (original_path, splitted_path))
+        logger.info("archive and split '%s' to '%s'…", original_path, splitted_path)
         p = subprocess.Popen(
             cmd,  # nosec
             shell=True,  # nosec
@@ -214,10 +221,8 @@ class DirectorySender:
         )
         stdout, stderr = p.communicate(b"")
         if p.returncode:
-            logger.error("command = %s , return code = %s" % (cmd, p.returncode))
-            logger.error(
-                "stdout = %s\nstderr = %s" % (stdout.decode(), stderr.decode())
-            )
+            logger.error("command = %s , return code = %s", cmd, p.returncode)
+            logger.error("stdout = %s\nstderr = %s", stdout.decode(), stderr.decode())
 
     def split_source_files(self, dir_abspath: str, split_size: int):
         """transform some files into a single, splitted, archive
@@ -228,7 +233,7 @@ class DirectorySender:
         remove the first subfolder
         move the content of the second subfolder to its parent
         remove the second subfolder"""
-        logger.info("Split '%s' into %s-bytes chunks" % (dir_abspath, split_size))
+        logger.info("split '%s' into %s-bytes chunks", dir_abspath, split_size)
         names = os.listdir(dir_abspath)
         if not names:
             return
@@ -256,16 +261,17 @@ class DirectorySender:
         index_path = self.index_abspath
         if not os.path.isdir(dir_abspath):
             logger.warning(
-                "Cannot send '%s' (missing directory)." % self.transfer_abspath
+                "cannot send '%s' (missing directory).", self.transfer_abspath
             )
             raise ValueError("missing directory '%s'" % dir_abspath)
         elif not os.path.isfile(index_path):
             logger.warning(
-                "Cannot send '%s' (missing index file '%s')."
-                % (self.transfer_abspath, self.index_abspath)
+                "cannot send '%s': missing index file '%s'.",
+                self.transfer_abspath,
+                self.index_abspath,
             )
-            raise ValueError("Missing index '%s'" % index_path)
-        logger.info("Sending '%s'…" % self.transfer_abspath)
+            raise ValueError("missing index '%s'.", index_path)
+        logger.info("sending '%s'…", self.transfer_abspath)
         start = time.time()
         if self.use_tar_archives:
             self.send_directory_tar(port=port)
@@ -273,8 +279,7 @@ class DirectorySender:
             self.send_directory_no_tar(port=port)
         end = time.time()
         logger.info(
-            "Directory '%s' sent in %s seconds."
-            % (self.transfer_abspath, (end - start))
+            "directory '%s' sent in %s seconds.", self.transfer_abspath, (end - start)
         )
 
     def send_directory_tar(self, port: Optional[int] = None):
@@ -297,10 +302,10 @@ class DirectorySender:
         ]
         # we use gzip, not for compression (most files are probably already compressed) but for the CRC checksum
         # we cannot use more efficient algorithms like xz/bz2 (they cannot compress streams)
-        logger.info("Sending %s via hairgap …" % dir_abspath)
+        logger.info("sending %s via hairgap …", dir_abspath)
         hairgap_cmd = self.get_hairgap_command(self.config, port)
-        logger.debug("hairgaps command: %s" % " ".join(hairgap_cmd))
-        logger.debug("tar command: %s" % " ".join(tar_cmd))
+        logger.debug("hairgaps command: '%s'.", " ".join(hairgap_cmd))
+        logger.debug("tar command: '%s'.", " ".join(tar_cmd))
         esc_tar_cmd = [shlex.quote(x) for x in tar_cmd]
         esc_hairgap_cmd = [shlex.quote(x) for x in hairgap_cmd]
         cmd = "%s|%s" % (" ".join(esc_tar_cmd), " ".join(esc_hairgap_cmd))
@@ -315,8 +320,11 @@ class DirectorySender:
         time.sleep(self.config.end_delay_s)
         if p.returncode:
             logger.error(
-                "Unable to run '%s' \nreturncode=%s\nstdout=%r\nstderr=%r\n"
-                % (" ".join(cmd), p.returncode, stdout.decode(), stderr.decode())
+                "unable to run '%s'.\nreturncode=%s\nstdout=%r\nstderr=%r\n",
+                " ".join(cmd),
+                p.returncode,
+                stdout.decode(),
+                stderr.decode(),
             )
             raise ValueError("Unable to send '%s'" % dir_abspath)
 
@@ -346,8 +354,8 @@ class DirectorySender:
         port: Optional[int] = None,
     ):
         if not os.path.isfile(file_abspath):
-            logger.warning("Missing file '%s'." % file_abspath)
-            raise ValueError("Missing file '%s'" % file_abspath)
+            logger.warning("missing file '%s'.", file_abspath)
+            raise ValueError("Missing file '%s'." % file_abspath)
         empty_file_fd = None
         file_size = os.path.getsize(file_abspath)
         if file_size == 0:
@@ -377,12 +385,15 @@ class DirectorySender:
             stdout, stderr = p.communicate()
             if p.returncode:
                 logger.error(
-                    "Unable to run '%s' \nreturncode=%s\nstdout=%r\nstderr=%r\n"
-                    % (" ".join(cmd), p.returncode, stdout.decode(), stderr.decode())
+                    "unable to run '%s'.\nreturncode=%s\nstdout=%r\nstderr=%r\n",
+                    " ".join(cmd),
+                    p.returncode,
+                    stdout.decode(),
+                    stderr.decode(),
                 )
                 raise ValueError("Unable to send '%s'" % file_abspath)
         logger.info(
-            "File '%s' sent; sleeping for %ss." % (file_abspath, config.end_delay_s)
+            "file '%s' sent; sleeping for %ss.", file_abspath, config.end_delay_s
         )
         if empty_file_fd is not None:
             empty_file_fd.close()
