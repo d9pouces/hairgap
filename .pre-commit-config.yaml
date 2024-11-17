@@ -45,6 +45,5 @@ repos:
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
-    exclude: ^(id_tests/data/.*|npm/node_modules/.*|interdiode/static/vendor/.*|interdiode/static/js/.*)
 default_language_version:
   python: python3.12
