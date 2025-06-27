@@ -26,7 +26,7 @@ name = "hairgap"
 packages = [{include = "hairgap"}]
 readme = "README.md"
 repository = 'https://github.com/d9pouces/hairgap'
-version = "1.2.1"
+version = "1.2.2"
 
 [tool.poetry.dependencies]
 python = "^3.9"
