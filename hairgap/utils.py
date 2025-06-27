@@ -123,7 +123,7 @@ def ensure_dir(path, parent=True):
     """
     dirname = os.path.dirname(path) if parent else path
     if not os.path.isdir(dirname):
-        os.makedirs(dirname)
+        os.makedirs(dirname, exist_ok=True)
     return path
 
 
