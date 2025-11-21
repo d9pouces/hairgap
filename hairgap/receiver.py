@@ -137,7 +137,7 @@ class Receiver:
         ensure_dir(tmp_path, parent=True)
         with open(tmp_path, "wb") as fd:
             cmd = [
-                self.config.hairgapr_path,
+                str(self.config.hairgapr_path),
                 "-p",
                 str(self.port or self.config.destination_port),
             ]

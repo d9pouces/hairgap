@@ -402,7 +402,7 @@ class DirectorySender:
     @staticmethod
     def get_hairgap_command(config: Config, port: Optional[int]):
         cmd = [
-            config.hairgaps_path,
+            str(config.hairgaps_path),
             "-p",
             str(port or config.destination_port),
         ]
