@@ -16,7 +16,8 @@ classifiers = [
   'Programming Language :: Python :: 3.10',
   'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
-  'Programming Language :: Python :: 3.13'
+  'Programming Language :: Python :: 3.13',
+  'Programming Language :: Python :: 3.14'
 ]
 description = "Basic protocol to send files using the hairgap binary ( github.com/cea-sec/hairgap )."
 documentation = 'https://github.com/d9pouces/hairgap'
@@ -26,7 +27,7 @@ name = "hairgap"
 packages = [{include = "hairgap"}]
 readme = "README.md"
 repository = 'https://github.com/d9pouces/hairgap'
-version = "1.2.2"
+version = "1.2.3"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -37,22 +38,3 @@ pytest = "^8.3.3"
 
 [tool.poetry.scripts]
 pyhairgap = 'hairgap.cli:main'
-
-[tool.tox]
-legacy_tox_ini = """
-
-[tox:tox]
-envlist = py
-minversion = 3.4.0
-
-[testenv:py]
-commands =
-  docker run --rm -v {env:PWD}:/src python:3.13 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
-  docker run --rm -v {env:PWD}:/src python:3.12 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
-  docker run --rm -v {env:PWD}:/src python:3.11 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
-  docker run --rm -v {env:PWD}:/src python:3.10 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
-  docker run --rm -v {env:PWD}:/src python:3.9 /bin/sh -c 'pip install poetry tox pytest pip hairgap-binaries --upgrade > /dev/null && cd /src && pytest'
-allowlist_externals =
-    docker
-
-"""
