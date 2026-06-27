@@ -1,0 +1,20 @@
+name: Basic unittests
+on:
+  push:
+    branches:
+    - master
+    - dev
+jobs:
+  unittests:
+    name: Python ${{ matrix.python-version }} / Django ${{ matrix.django-version }}
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
+    steps:
+    - uses: actions/checkout@v4.2.2
+    - uses: actions/setup-python@v5.3.0
+      with:
+        python-version: ${{ matrix.python-version }}
+    - run: python3 -m pip install --user coverage pytest hairgap-binaries
+    - run: python3 -m pytest -v -s

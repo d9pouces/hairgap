@@ -1,40 +1,48 @@
 [build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core"]
+requires = ["uv_build>=0.11.21,<0.12.0"]
+build-backend = "uv_build"
 
-[tool.poetry]
-authors = ["Matthieu Gallet <github@19pouces.net>"]
-classifiers = [
-  'Development Status :: 5 - Production/Stable',
-  'License :: OSI Approved :: CEA CNRS Inria Logiciel Libre License, version 2.1 (CeCILL-2.1)',
-  'Operating System :: POSIX :: Linux',
-  'Operating System :: Unix',
-  'Natural Language :: English',
-  'Natural Language :: French',
-  'Programming Language :: Python :: 3 :: Only',
-  'Programming Language :: Python :: 3.9',
-  'Programming Language :: Python :: 3.10',
-  'Programming Language :: Python :: 3.11',
-  'Programming Language :: Python :: 3.12',
-  'Programming Language :: Python :: 3.13',
-  'Programming Language :: Python :: 3.14'
-]
-description = "Basic protocol to send files using the hairgap binary ( github.com/cea-sec/hairgap )."
-documentation = 'https://github.com/d9pouces/hairgap'
-license = "CeCILL-B"
-maintainers = ["Matthieu Gallet <github@19pouces.net>"]
+[project]
 name = "hairgap"
-packages = [{include = "hairgap"}]
+version = "1.2.4"
+description = "Basic protocol to send files using the hairgap binary ( github.com/cea-sec/hairgap )."
+authors = [{ name = "Matthieu Gallet", email = "github@19pouces.net" }]
+requires-python = ">=3.9,<4"
 readme = "README.md"
-repository = 'https://github.com/d9pouces/hairgap'
-version = "1.2.3"
+license = "CECILL-B"
+maintainers = [{ name = "Matthieu Gallet", email = "github@19pouces.net" }]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Unix",
+    "Natural Language :: English",
+    "Natural Language :: French",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
+[project.urls]
+Repository = "https://github.com/d9pouces/hairgap"
+Documentation = "https://github.com/d9pouces/hairgap"
 
-[tool.poetry.group.dev.dependencies]
-coverage = "^7.6.7"
-pytest = "^8.3.3"
+[project.scripts]
+pyhairgap = "hairgap.cli:main"
 
-[tool.poetry.scripts]
-pyhairgap = 'hairgap.cli:main'
+[dependency-groups]
+dev = [
+    "coverage>=6.0.1",
+    "pytest>=8.0.0",
+]
+
+[tool.uv]
+default-groups = "all"
+
+[tool.uv.build-backend]
+module-name = ["hairgap"]
+module-root = ""

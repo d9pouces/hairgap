@@ -25,6 +25,7 @@ import subprocess
 import tempfile
 import time
 import uuid
+import sys
 from typing import Dict, Optional, Tuple
 
 from hairgap.constants import (
@@ -199,7 +200,10 @@ class DirectorySender:
         prefix: str = "content.tar.gz.",
     ):
         ensure_dir(splitted_path, parent=False)
-        tar_cmd = [config.tar, "czf", "-", "-C", original_path, "."]
+        tar_cmd = [config.tar, "czf", "-"]
+        if sys.platform == 'darwin':
+            tar_cmd += ["--no-mac-metadata"]
+        tar_cmd += [ "-C", original_path, "."]
         split_cmd = [
             config.split,
             "-b",
@@ -289,10 +293,10 @@ class DirectorySender:
         """
         dir_abspath = self.transfer_abspath
         index_path = self.index_abspath
-        tar_cmd = [
-            self.config.tar,
-            "czf",
-            "-",
+        tar_cmd = [self.config.tar, "czf", "-"]
+        if sys.platform == 'darwin':
+            tar_cmd += ["--no-mac-metadata"]
+        tar_cmd += [
             "-C",
             os.path.dirname(index_path),
             os.path.basename(index_path),
