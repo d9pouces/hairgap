@@ -243,6 +243,10 @@ class Config:
         return self._destination_ip
 
     @property
+    def listen_ip(self):
+        return self._destination_ip
+
+    @property
     def destination_port(self):
         return self._destination_port
 

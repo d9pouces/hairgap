@@ -145,7 +145,7 @@ class Receiver:
                 cmd += ["-t", str(self.config.timeout_s)]
             if self.config.mem_limit_mb:
                 cmd += ["-m", str(self.config.mem_limit_mb)]
-            cmd.append(self.config.destination_ip)
+            cmd.append(self.config.listen_ip)
             self.hairgap_subprocess = subprocess.Popen(
                 cmd, stdout=fd, stderr=subprocess.PIPE
             )
