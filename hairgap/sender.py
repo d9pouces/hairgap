@@ -325,7 +325,7 @@ class DirectorySender:
         if p.returncode:
             logger.error(
                 "unable to run '%s'.\nreturncode=%s\nstdout=%r\nstderr=%r\n",
-                " ".join(cmd),
+                cmd,
                 p.returncode,
                 stdout.decode(),
                 stderr.decode(),

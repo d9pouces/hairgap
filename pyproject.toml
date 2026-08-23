@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "hairgap"
-version = "1.2.4"
+version = "1.2.5"
 description = "Basic protocol to send files using the hairgap binary ( github.com/cea-sec/hairgap )."
 authors = [{ name = "Matthieu Gallet", email = "github@19pouces.net" }]
 requires-python = ">=3.9,<4"

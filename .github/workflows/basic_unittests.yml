@@ -6,8 +6,9 @@ on:
     - dev
 jobs:
   unittests:
-    name: Python ${{ matrix.python-version }} / Django ${{ matrix.django-version }}
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
